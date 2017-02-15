@@ -1,0 +1,13 @@
+// Placez vos combinaisons de touches dans ce fichier pour remplacer les valeurs par défaut
+[{
+    "key": "alt+t",
+    "command": "workbench.action.terminal.toggleTerminal"
+},{
+    "key": "cmd+d",
+    "command": "editor.action.copyLinesDownAction",
+    "when": "editorTextFocus && !editorReadonly"
+},{
+    "key": "cmd+backspace",
+    "command": "editor.action.deleteLines",
+    "when": "editorTextFocus && !editorReadonly"
+}]
