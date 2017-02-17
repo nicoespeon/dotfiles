@@ -1,13 +1,25 @@
 [
 	{
 		"name": "O3 SAR",
-		"rootPath": "$home/Google Drive/OCTO/Samuel Rochette (SAR)/O3",
+		"rootPath": "$home/Google Drive/Professionnel/OCTO/Samuel Rochette (SAR)/O3",
 		"paths": [],
 		"group": ""
 	},
 	{
 		"name": "BOW Paris Website",
 		"rootPath": "$home/Development/github/bow-paris/bow-paris.github.io",
+		"paths": [],
+		"group": ""
+	},
+	{
+		"name": "Personal Blog",
+		"rootPath": "$home/Development/github/nicoespeon/nicoespeon.github.io",
+		"paths": [],
+		"group": ""
+	},
+	{
+		"name": "Rename Series",
+		"rootPath": "$home/Development/sandbox/rename-series",
 		"paths": [],
 		"group": ""
 	}
