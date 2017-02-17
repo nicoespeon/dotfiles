@@ -22,19 +22,22 @@
     "command": "editor.action.moveLinesUpAction",
     "when": "editorTextFocus && !editorReadonly"
 },{
-    "key": "cmd+g",
+    "key": "ctrl+g",
     "command": "editor.action.addSelectionToNextFindMatch",
     "when": "editorTextFocus"
 },{
-    "key": "alt+cmd+g",
+    "key": "alt+ctrl+g",
     "command": "editor.action.moveSelectionToNextFindMatch",
     "when": "editorTextFocus"
 },{
-    "key": "shift+cmd+g",
+    "key": "shift+ctrl+g",
     "command": "editor.action.moveSelectionToPreviousFindMatch",
     "when": "editorTextFocus"
 },{
     "key": "ctrl+h",
     "command": "editor.action.commentLine",
     "when": "editorTextFocus && !editorReadonly"
+},{
+    "key": "cmd+l",
+    "command": "workbench.action.gotoLine"
 }]
