@@ -22,5 +22,23 @@
 		"rootPath": "$home/Development/sandbox/rename-series",
 		"paths": [],
 		"group": ""
+	},
+	{
+		"name": "plop",
+		"rootPath": "$home/Development/github/nicoespeon/plop",
+		"paths": [],
+		"group": ""
+	},
+	{
+		"name": "node-plop",
+		"rootPath": "$home/Development/github/nicoespeon/node-plop",
+		"paths": [],
+		"group": ""
+	},
+	{
+		"name": "GitGraph.js",
+		"rootPath": "$home/Development/github/nicoespeon/gitgraph.js",
+		"paths": [],
+		"group": ""
 	}
 ]

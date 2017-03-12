@@ -2,8 +2,12 @@
 {
   "files.autoSave": "onFocusChange",
   "editor.fontSize": 14,
-  "editor.wrappingColumn": 80,
+  "editor.wordWrap": "wordWrapColumn",
   "terminal.integrated.fontSize": 14,
-"terminal.integrated.fontFamily": "'Menlo for Powerline', Menlo",
-"workbench.welcome.enabled": false
+  "workbench.welcome.enabled": false,
+  "editor.renderWhitespace": "boundary",
+  "editor.snippetSuggestions": "top",
+  "files.trimTrailingWhitespace": true,
+"files.insertFinalNewline": true,
+"workbench.iconTheme": "file-icons"
 }

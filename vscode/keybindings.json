@@ -38,6 +38,28 @@
     "command": "editor.action.commentLine",
     "when": "editorTextFocus && !editorReadonly"
 },{
+    "key": "ctrl+w",
+    "command": "deleteWordLeft",
+    "when": "editorTextFocus && !editorReadonly"
+},{
     "key": "cmd+l",
     "command": "workbench.action.gotoLine"
+},{
+    "key": "alt+cmd+/",
+    "command": "editor.action.formatDocument",
+    "when": "editorHasDocumentFormattingProvider && editorTextFocus && !editorReadonly"
+},{
+    "key": "alt+cmd+q",
+    "command": "bookmarks.toggle",
+    "when": "editorTextFocus"
+},{
+    "key": "cmd+o",
+    "command": "workbench.action.quickOpen"
+},{
+    "key": "alt+cmd+z",
+    "command": "bookmarks.jumpToNext",
+    "when": "editorTextFocus"
+},{
+    "key": "cmd+1",
+    "command": "workbench.action.toggleSidebarVisibility"
 }]
