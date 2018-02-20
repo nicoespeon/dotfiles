@@ -9,7 +9,7 @@
 			<key>Git</key>
 			<dict>
 				<key>date</key>
-				<date>2017-02-13T08:30:22Z</date>
+				<date>2017-07-18T20:13:23Z</date>
 				<key>entry</key>
 				<dict>
 					<key>aliases</key>
@@ -104,7 +104,7 @@
 			<key>Vim</key>
 			<dict>
 				<key>date</key>
-				<date>2017-02-13T08:30:55Z</date>
+				<date>2018-01-11T08:39:58Z</date>
 				<key>entry</key>
 				<dict>
 					<key>aliases</key>
@@ -199,7 +199,7 @@
 			<key>phoenix</key>
 			<dict>
 				<key>date</key>
-				<date>2017-03-11T14:32:13Z</date>
+				<date>2017-08-06T13:54:32Z</date>
 				<key>entry</key>
 				<dict>
 					<key>name</key>
@@ -253,10 +253,48 @@
 	<dict>
 		<key>installed</key>
 		<dict>
+			<key>Async.js</key>
+			<dict>
+				<key>date</key>
+				<date>2017-08-18T13:36:37Z</date>
+				<key>entry</key>
+				<dict>
+					<key>authorLinkHref</key>
+					<string>https://github.com/Kapeli/Dash-User-Contributions/tree/master/docsets/Async.js#readme</string>
+					<key>authorLinkText</key>
+					<string>Igor Kalashnikov</string>
+					<key>name</key>
+					<string>Async.js</string>
+					<key>platform</key>
+					<string>usercontribAsync.js</string>
+					<key>uniqueIdentifier</key>
+					<string>Async.js</string>
+				</dict>
+			</dict>
+			<key>Elm</key>
+			<dict>
+				<key>date</key>
+				<date>2017-12-09T23:02:40Z</date>
+				<key>entry</key>
+				<dict>
+					<key>aliases</key>
+					<array/>
+					<key>authorLinkHref</key>
+					<string>https://github.com/Kapeli/Dash-User-Contributions/tree/master/docsets/Elm#readme</string>
+					<key>authorLinkText</key>
+					<string>Peter Damoc</string>
+					<key>name</key>
+					<string>Elm</string>
+					<key>platform</key>
+					<string>usercontribElm</string>
+					<key>uniqueIdentifier</key>
+					<string>Elm</string>
+				</dict>
+			</dict>
 			<key>Jest</key>
 			<dict>
 				<key>date</key>
-				<date>2017-02-17T20:37:28Z</date>
+				<date>2017-06-07T07:07:20Z</date>
 				<key>entry</key>
 				<dict>
 					<key>aliases</key>
@@ -408,6 +446,11 @@
 			<dict>
 				<key>date</key>
 				<date>2017-02-13T08:29:06Z</date>
+			</dict>
+			<key>http://kapeli.com/feeds/jQuery.xml</key>
+			<dict>
+				<key>date</key>
+				<date>2017-03-16T14:24:02Z</date>
 			</dict>
 		</dict>
 		<key>uninstalled</key>

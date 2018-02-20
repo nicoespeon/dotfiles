@@ -4,16 +4,1101 @@ require_once './src/workflows.php';
 require './vendor/autoload.php';
 
 /**
+ * isUserPremiumSubscriber function.
+ *
+ * @param mixed $w
+ */
+ function isUserPremiumSubscriber($w)
+ {
+     try {
+         $api = getSpotifyWebAPI($w);
+         $me = $api->me();
+     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+         return false;
+     }
+ 
+     if (isset($me->product)) {
+        if($me->product == 'premium') {
+            return true;
+        }
+     }
+ 
+     return false;
+ }
+
+/**
+ * getArtistName function.
+ *
+ * @param mixed $w
+ * @param mixed $artist_uri
+ */
+ function getArtistName($w, $artist_uri)
+ {
+     try {
+         $api = getSpotifyWebAPI($w);
+         // check if it is part collection
+         $tmp = explode(':', $artist_uri);
+         if (isset($tmp[3]) && $tmp[3] == 'collection') {
+            $artist_uri = 'spotify:artist:' . $tmp[5];
+         }
+         $artist = $api->getArtist($artist_uri);
+
+        return $artist->name;
+     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+         $w->result(null, '', 'Error: Spotify WEB API returned error '.$e->getMessage(), 'function getArtistName, artist_uri=' . $artist_uri, './images/warning.png', 'no', null, '');
+ 
+         return '';
+     }
+ }
+
+/**
+ * getAlbumName function.
+ *
+ * @param mixed $w
+ * @param mixed $album_uri
+ */
+ function getAlbumName($w, $album_uri)
+ {
+     try {
+         $api = getSpotifyWebAPI($w);
+         // check if it is part collection
+         $tmp = explode(':', $album_uri);
+         if (isset($tmp[3]) && $tmp[3] == 'collection') {
+            $album_uri = 'spotify:album:' . $tmp[5];
+         }
+
+         $album = $api->getAlbum($album_uri);
+
+        return $album->name;
+     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+         $w->result(null, '', 'Error: Spotify WEB API returned error '.$e->getMessage(), 'function getAlbumName, album_uri=' . $album_uri, './images/warning.png', 'no', null, '');
+ 
+         return '';
+     }
+ }
+
+/**
+ * getPlaylistName function.
+ *
+ * @param mixed $w
+ * @param mixed $playlist_uri
+ */
+ function getPlaylistName($w, $playlist_uri)
+ {
+     $url = '';
+     $tmp = explode(':', $playlist_uri);
+     try {
+         $api = getSpotifyWebAPI($w);
+         $playlist = $api->getUserPlaylist(urlencode($tmp[2]), $tmp[4], array(
+                 'fields' => array(
+                     'name',
+                 ),
+             ));
+
+        return $playlist->name;
+     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+        $w->result(null, '', 'Error: Spotify WEB API returned error '.$e->getMessage(), 'function getPlaylistName, playlist_uri=' . $playlist_uri, './images/warning.png', 'no', null, '');
+
+         return '';
+     }
+ }
+
+/**
+ * setRepeatStateSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function setRepeatStateSpotifyConnect($w, $device_id, $state)
+ {
+    if($state) {
+        $repeat_state = 'context';
+    } else {
+        $repeat_state = 'off';
+    }
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->repeat([
+                'state' => $repeat_state,
+                'device_id' => $device_id,
+            ]);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(setRepeatStateSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * isRepeatStateSpotifyConnectActive function.
+ *
+ * @param mixed $w
+ */
+ function isRepeatStateSpotifyConnectActive($w)
+ {
+    // Read settings from JSON
+
+    $settings = getSettings($w);
+    
+    $country_code = $settings->country_code;
+
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+
+            $playback_info = $api->getMyCurrentPlaybackInfo(array(
+            'market' => $country_code,
+            ));
+            $retry = false;
+
+            if($playback_info->repeat_state == 'track') {
+                return true;
+            } else if($playback_info->repeat_state == 'context') {
+                return true;
+            }
+            return false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(isRepeatStateSpotifyConnectActive): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+ 
+/**
+ * setShuffleStateSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function setShuffleStateSpotifyConnect($w, $device_id, $state)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->shuffle([
+                'state' => $state,
+                'device_id' => $device_id,
+            ]);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(setShuffleStateSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * getVolumeSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function getVolumeSpotifyConnect($w, $device_id)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            
+            $devices = $api->getMyDevices();
+            $retry = false;
+            if(isset($devices->devices)) {
+                foreach ($devices->devices as $device) {
+                    if ($device->is_active) {
+                        return $device->volume_percent;
+                    }
+                }
+            }
+            return false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(getVolumeSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+}
+
+/**
+ * changeVolumeSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function changeVolumeSpotifyConnect($w, $device_id, $volume_percent)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->changeVolume([
+                'volume_percent' => $volume_percent,
+            ]);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(changeVolumeSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * playTrackSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function playTrackSpotifyConnect($w, $device_id, $track_uri, $context_uri)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+
+            if ($context_uri != '') {
+                if ($track_uri != '') {
+                    $offset = [
+                        'uri' => $track_uri,
+                    ];
+                    $options = [
+                        'context_uri' => $context_uri,
+                        'offset' => $offset,
+                    ];
+                } else {
+                    $options = [
+                        'context_uri' => $context_uri,
+                    ];
+                }
+                $api->play($device_id, $options);
+                $retry = false;
+            } else {
+                $uris = array();
+                $uris[] = $track_uri;
+                $options = [
+                    'uris' => $uris
+                ];
+                $api->play($device_id, $options);
+                $retry = false;
+            }
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(playTrackSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * nextTrackSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function nextTrackSpotifyConnect($w, $device_id)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->next($device_id);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(nextTrackSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * previousTrackSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function previousTrackSpotifyConnect($w, $device_id)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->previous($device_id);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(previousTrackSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * playpauseSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function playpauseSpotifyConnect($w, $device_id, $country_code)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+
+            $playback_info = $api->getMyCurrentPlaybackInfo(array(
+            'market' => $country_code,
+            ));
+
+            $is_playing = $playback_info->is_playing;
+            if ($is_playing) {
+                $api->pause($device_id);
+            } else {
+                $api->play($device_id);
+            }
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(playpauseSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * playSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function playSpotifyConnect($w, $device_id)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->play($device_id);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(playSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * pauseSpotifyConnect function.
+ *
+ * @param mixed $w
+ */
+ function pauseSpotifyConnect($w, $device_id)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->pause($device_id);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(pauseSpotifyConnect): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ }
+
+/**
+ * getSpotifyConnectCurrentDeviceId function.
+ *
+ * @param mixed $w
+ */
+ function getSpotifyConnectCurrentDeviceId($w)
+ {
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $devices = $api->getMyDevices();
+            $retry = false;
+            if(isset($devices->devices)) {
+                foreach ($devices->devices as $device) {
+                    if ($device->is_active) {
+                        return $device->id;
+                    }
+                }
+            }
+            return '';
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            if ($e->getMessage() == 'Permissions missing') {
+                $retry = false;
+                $w->result(null, serialize(array(
+                            '' /*track_uri*/,
+                            '' /* album_uri */,
+                            '' /* artist_uri */,
+                            '' /* playlist_uri */,
+                            '' /* spotify_command */,
+                            '' /* query */,
+                            '' /* other_settings*/,
+                            'reset_oauth_settings' /* other_action */,
+                            '' /* artist_name */,
+                            '' /* track_name */,
+                            '' /* album_name */,
+                            '' /* track_artwork_path */,
+                            '' /* artist_artwork_path */,
+                            '' /* album_artwork_path */,
+                            '' /* playlist_name */,
+                            '', /* playlist_artwork_path */
+                        )), 'The workflow needs more privilages to do this, click to restart authentication', array(
+                        'Next time you invoke the workflow, you will have to re-authenticate',
+                        'alt' => 'Not Available',
+                        'cmd' => 'Not Available',
+                        'shift' => 'Not Available',
+                        'fn' => 'Not Available',
+                        'ctrl' => 'Not Available',
+                    ), './images/warning.png', 'yes', null, '');
+            } else {
+                logMsg('Error(getSpotifyConnectCurrentDeviceId): retry '.$nb_retry.' (exception '.print_r($e).')');
+                if ($e->getCode() == 429) { // 429 is Too Many Requests
+                    $lastResponse = $api->getRequest()->getLastResponse();
+                    $retryAfter = $lastResponse['headers']['Retry-After'];
+                    sleep(retryAfter);
+                } else if ($e->getCode() == 404) {
+                    // skip
+                    break;
+                } else if ($e->getCode() == 500
+                    || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                    // retry
+                    if ($nb_retry > 2) {
+                        handleSpotifyWebAPIException($w, $e);
+                        $retry = false;
+    
+                        return false;
+                    }
+                    ++$nb_retry;
+                    sleep(5);
+                } else {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+    
+                    return false;
+                }
+            }
+        }
+    }
+ }
+
+
+/**
+ * changeUserDevice function.
+ *
+ * @param mixed $w
+ */
+ function changeUserDevice($w, $device_id)
+ {
+    $options = [
+        'device_ids' => $device_id,
+        'play' => true
+    ];
+
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+            $api->changeMyDevice($options);
+            $retry = false;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            logMsg('Error(changeUserDevice): retry '.$nb_retry.' (exception '.print_r($e).')');
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    handleSpotifyWebAPIException($w, $e);
+                    $retry = false;
+
+                    return false;
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
+        }
+    }
+ 
+     return true;
+ }
+
+function isSpotifyAppInstalled()
+{
+	exec("osascript -e 'id of application \"Spotify\"'", $retArr, $retVal);
+	if ($retVal != 0) {
+		return false;
+    }
+    return true;
+}
+/**
+ * isShuffleActive function.
+ *
+ */
+function isShuffleActive($print_output)
+{
+    $w = new Workflows('com.vdesabou.spotify.mini.player');
+
+    // Read settings from JSON
+
+    $settings = getSettings($w);
+
+    $output_application = $settings->output_application;
+    $country_code = $settings->country_code;
+
+    if ($output_application == 'MOPIDY') {
+        $isShuffleEnabled = invokeMopidyMethod($w, 'core.tracklist.get_random', array());
+        if ($isShuffleEnabled) {
+            $command_output = 'true';
+        } else {
+            $command_output = 'false';
+        }
+    } else if($output_application == 'APPLESCRIPT') {
+        $command_output = exec("osascript -e '
+    tell application \"Spotify\"
+    if shuffling enabled is true then
+        if shuffling is true then
+            return \"true\"
+        else
+            return \"false\"
+        end if
+    else
+        return \"false\"
+    end if
+    end tell'");
+    } else {
+        $retry = true;
+        $nb_retry = 0;
+        while ($retry) {
+            try {
+                $api = getSpotifyWebAPI($w);
+    
+                $playback_info = $api->getMyCurrentPlaybackInfo(array(
+                'market' => $country_code,
+                ));
+
+                if($playback_info->shuffle_state) {
+                    $command_output = 'true';
+                } else {
+                    $command_output = 'false';
+                }
+    
+                $retry = false;
+            } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+                logMsg('Error(isShuffleActive): retry '.$nb_retry.' (exception '.print_r($e).')');
+                if ($e->getCode() == 429) { // 429 is Too Many Requests
+                    $lastResponse = $api->getRequest()->getLastResponse();
+                    $retryAfter = $lastResponse['headers']['Retry-After'];
+                    sleep(retryAfter);
+                } else if ($e->getCode() == 404) {
+                    // skip
+                    break;
+                } else if ($e->getCode() == 500
+                    || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                    // retry
+                    if ($nb_retry > 2) {
+                        $retry = false;
+    
+                        return false;
+                    }
+                    ++$nb_retry;
+                    sleep(5);
+                } else {
+                    $retry = false;
+    
+                    return false;
+                }
+            }
+        }
+    }
+    if($print_output) {
+        echo $command_output;
+    }
+
+    return $command_output;
+}
+
+/**
+ * getUserArtworkURL function.
+ *
+ * @param mixed $w
+ */
+function getUserArtworkURL($w, $user_id)
+{
+    $url = '';
+    try {
+        $api = getSpotifyWebAPI($w);
+        $user = $api->getUser(urlencode($user_id));
+    } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+        return $url;
+    }
+
+    if (isset($user->images)) {
+
+        if (isset($user->images[0]) && isset($user->images[0]->url)) {
+            return $user->images[0]->url;
+        }
+    }
+
+    return $url;
+}
+
+/**
+ * getUserArtwork function.
+ *
+ * @param mixed $w
+ */
+function getUserArtwork($w, $user_id, $forceFetch = false)
+{
+    $user_folder = $w->data().'/users/'.$user_id;
+    $currentArtwork = $user_folder.'/'.$user_id.'.png';
+
+    if(!$forceFetch) {
+        if(file_exists($currentArtwork)) {
+            return $currentArtwork;
+        }
+    }
+
+    $url = getUserArtworkURL($w, $user_id);
+
+    if($url != '') {
+        if (!file_exists($user_folder)) {
+            return './images/artists.png';
+        }
+
+        $fp = fopen($currentArtwork, 'w+');
+        $options = array(
+            CURLOPT_FILE => $fp,
+            CURLOPT_FOLLOWLOCATION => 1,
+            CURLOPT_TIMEOUT => 5,
+        );
+        $w->request("$url", $options);
+
+        return $currentArtwork;
+    } else {
+        copy('./images/artists.png', $currentArtwork);
+        return './images/artists.png';
+    }
+}
+
+/**
+ * getCurrentUser function.
+ *
+ * @param mixed $w
+ */
+function getCurrentUser($w)
+{
+    $current_user = $w->read('current_user.json');
+
+    if ($current_user == false) {
+        // This should only happen once
+
+        $settings = getSettings($w);
+        $userid = $settings->userid;
+
+        if($userid == false) {
+            return;
+        }
+        
+        $ret = $w->write($userid, 'current_user.json');
+
+        $user_folder = $w->data().'/users/'.$userid;
+        if (!file_exists($user_folder)) {
+                exec("mkdir -p '".$user_folder."'");
+
+                if (file_exists($w->data().'/library.db')) {
+                    rename($w->data().'/library.db', $user_folder.'/library.db');
+                    link($user_folder.'/library.db',$w->data().'/library.db');
+                }
+                if (file_exists($w->data().'/settings.json')) {
+                    rename($w->data().'/settings.json', $user_folder.'/settings.json');
+                    link($user_folder.'/settings.json',$w->data().'/settings.json');
+                }
+                if (file_exists($w->data().'/history.json')) {
+                    rename($w->data().'/history.json', $user_folder.'/history.json');
+                    link($user_folder.'/history.json',$w->data().'/history.json');
+                }
+        }
+
+        $current_user = $w->read('current_user.json');
+    }
+
+    return $current_user;
+}
+
+/**
+ * switchUser function.
+ *
+ * @param mixed $w
+ */
+function switchUser($w, $new_user)
+{
+    $new_user_folder = $w->data().'/users/'.$new_user;
+    
+    if (file_exists($w->data().'/library.db')) {
+        deleteTheFile($w->data().'/library.db');   
+    }
+    if (file_exists($new_user_folder.'/library.db')) {
+        link($new_user_folder.'/library.db',$w->data().'/library.db');
+    }
+
+    if (file_exists($w->data().'/settings.json')) {
+        deleteTheFile($w->data().'/settings.json');
+    }
+    if (file_exists($new_user_folder.'/settings.json')) {
+        link($new_user_folder.'/settings.json',$w->data().'/settings.json');
+    }
+
+    if (file_exists($w->data().'/history.json')) {
+        deleteTheFile($w->data().'/history.json');
+    }
+    if (file_exists($new_user_folder.'/history.json')) {
+        link($new_user_folder.'/history.json',$w->data().'/history.json');
+    }
+
+    $ret = $w->write($new_user, 'current_user.json');
+
+    displayNotificationWithArtwork($w, 'Current user is now ' . $new_user, getUserArtwork($w, $new_user, true), 'Switch User');
+
+    return;
+}
+
+/**
+ * newUser function.
+ *
+ * @param mixed $w
+ */
+function newUser($w)
+{   
+    if (file_exists($w->data().'/library.db')) {
+        deleteTheFile($w->data().'/library.db');
+    }
+    if (file_exists($w->data().'/settings.json')) {
+        deleteTheFile($w->data().'/settings.json');
+    }
+    if (file_exists($w->data().'/history.json')) {
+        deleteTheFile($w->data().'/history.json');
+    }
+
+    // just delete the file 
+    if (file_exists($w->data().'/current_user.json')) {
+        deleteTheFile($w->data().'/current_user.json');
+    }
+
+    exec("osascript -e 'tell application \"Alfred 3\" to search \"".getenv('c_spot_mini')." $query\"'");
+
+    return;
+}
+
+/**
+ * listUsers function.
+ *
+ * @param mixed $w
+ */
+function listUsers($w)
+{ 
+    $users_folder = $w->data().'/users/';
+    $users = scandir($users_folder);
+    // loop on users
+    foreach ($users as $user) {
+        if ($user == '.' || $user == '..' || $user == '.DS_Store') {
+            continue;
+        }
+        $w->result(null, serialize(array(
+                    '' /*track_uri*/,
+                    '' /* album_uri */,
+                    '' /* artist_uri */,
+                    '' /* playlist_uri */,
+                    '' /* spotify_command */,
+                    '' /* query */,
+                    'SWITCH_USER▹'.$user /* other_settings*/,
+                    '' /* other_action */,
+                    '' /* artist_name */,
+                    '' /* track_name */,
+                    '' /* album_name */,
+                    '' /* track_artwork_path */,
+                    '' /* artist_artwork_path */,
+                    '' /* album_artwork_path */,
+                    '' /* playlist_name */,
+                    '', /* playlist_artwork_path */
+                )), 'Switch user to '.$user.'', 'Type enter to validate', getUserArtwork($w, $user), 'yes', null, '');
+    }
+}
+/**
  * getSpotifyWebAPI function.
  *
  * @param mixed $w
  */
 function getSpotifyWebAPI($w, $old_api = null)
 {
-    if (!$w->internet()) {
-        throw new SpotifyWebAPI\SpotifyWebAPIException('No internet connection', 100);
-    }
-
     // Read settings from JSON
 
     $settings = getSettings($w);
@@ -140,7 +1225,7 @@ function switchThemeColor($w,$theme_color)
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
 
     $imgs = scandir('./images/');
 
@@ -185,6 +1270,7 @@ function switchThemeColor($w,$theme_color)
     // replace UUID images
     $uuid_imgs = array(
             '0A7E4CC3-BA4A-4DD4-AB4B-E2E8F9DBBE8C' => 'playpause',
+            'F0ED23FA-8524-4769-B610-828611958D6A' => 'recent',
             '0B75CF43-8B04-405F-86C3-2FFC59AC4A70' => 'artists',
             '05F86AA1-D3EE-4409-9A58-898B36FFE503' => 'kill',
             '15209065-AB33-44E4-ADFC-BAFC5033762E' => 'numbers',
@@ -217,11 +1303,11 @@ function switchThemeColor($w,$theme_color)
             '79F70A28-E2D9-4705-81A9-86F3EA8EB47F' => 'alfred_playlist',
             '7FE5D993-C14D-4B94-9479-B361680F1C40' => 'add_to',
             '7FF09231-F068-4EA0-8537-6C1EB608CA5A' => 'volume_down',
-            '81BA0BC2-F1CB-46DC-A715-C38A1A0E055E' => 'shuffle',
             '8339BE15-274E-4A77-A6A0-CEDF30EFD0E5' => 'next',
             '8598A5C9-72B6-4CEF-A498-D6C2ED06DC88' => 'radio_song',
             '873EF61A-BD03-4946-87B0-C7AE5DFC5E5B' => 'debug',
             '89BC46B4-E178-4855-8863-393730814F6E' => 'shuffle',
+            'BD255BDB-07A5-4EE9-858F-A58C6207D191' => 'shuffle',
             '8C78472B-13EB-4512-B94D-4BF92867CD92' => 'random',
             '8E4347FE-0FC3-4FF1-AAAF-E0C6CD084BB5' => 'volume_down',
             '8F478980-199B-45B5-AD41-EBA185446705' => 'issue',
@@ -231,6 +1317,8 @@ function switchThemeColor($w,$theme_color)
             '9E3FE06C-F5F8-41F3-A70F-B92E187EED75' => 'volmid',
             'A0EAB8B1-F034-490F-9534-44ADF572AF4E' => 'uncheck',
             'A0F746BD-C7AF-490F-B4D9-8BAEDDDAEF90' => 'alfred_playlist',
+            'E6CEF7D4-CFA9-4608-A188-65B33A602BAF' => 'alfred_playlist',
+            '11E4CA98-E51E-45E4-91ED-72B4A1A34283' => 'alfred_playlist',
             'A38DD404-DE03-42C2-B0CB-A37891B6F24D' => 'info',
             'A41190FA-4B23-4908-A4B7-16A14F338C11' => 'repeating',
             'A76C26BD-BA48-4797-839B-BE439FF40846' => 'pause',
@@ -264,6 +1352,7 @@ function switchThemeColor($w,$theme_color)
             'E5BAF801-726E-49C0-ABF2-7AD9F9ECD22A' => 'share',
             'FAA5FC99-7909-45B6-9BF0-7601DBAADC4F' => 'youtube',
             'C323BECC-0183-4562-B817-65624E13B3F3' => 'share',
+            'B8D706BB-D6E9-4AE3-B36B-ED6D4B34AD5F' => 'connect',
             'icon' => 'icon',
         );
 
@@ -314,6 +1403,7 @@ function switchThemeColor($w,$theme_color)
             '2737969D-A8B4-4550-8568-3C926D36DD81' => 'add_to_ap_yourmusic',
             '2375184C-CC97-4763-A846-D2FAB1259FD1' => 'random_album',
             '707403B7-FF4A-4995-99F3-AB2B5F39B34F' => 'debug',
+            'E9C9194B-AF5F-4BAD-88AB-DB7AFED380BF' => 'recent',
             '163265DD-5CAB-4D11-B984-F86871709AEE' => 'icon',
             '9045D879-6632-4113-9915-85534EBECBB1' => 'online',
             '5365AF85-EDB1-4789-9ABD-B272A8C96AA0' => 'volume_down',
@@ -322,7 +1412,7 @@ function switchThemeColor($w,$theme_color)
             '749D3ABB-38FB-4EFB-9E3D-881C5AF5CAC9' => 'next',
             '577A4640-8D94-4813-9223-B355BE7FE1BD' => 'shuffle',
             '569B0F42-A04A-40B7-9E86-EA1C61EF0AE5' => 'play_queue',
-            '178DD46F-F3E2-4105-B579-2ED25639AF43' => 'alfred_playlist',
+            '26215986-3B9E-4491-A93B-67878CE04EB5' => 'alfred_playlist',
             '89CD46BC-7C18-4D85-A23B-CF5F93273B1A' => 'keyescape',
             '83F461DC-A47F-4407-92C3-BF269BB49953' => 'uncheck',
             '83D8A06D-1B1C-4B90-A00A-5B5E575DF7E8' => 'radio_song',
@@ -337,6 +1427,7 @@ function switchThemeColor($w,$theme_color)
             '4FE5620A-FB79-440E-8633-B8148EE1191E' => 'add_to',
             'C5B9A789-80F3-41BA-9A46-C34DD4CDE050' => 'share',
             '15D6EBE2-6D82-4F2C-A4B3-5949424B4EF9' => 'youtube',
+            '28180F27-0728-414D-88F3-76E99A58FA7D' => 'connect',
         );
 
     foreach ($uuid_imgs as $key => $value) {
@@ -420,7 +1511,7 @@ function switchThemeColor($w,$theme_color)
 	$zip_command = 'unzip '  . $zip_file . ' -d ' . '\'./App/'.$theme_color.'/\'';
 	exec($zip_command);
     
-    exec('open "'.'/App/'.$theme_color.'/Spotify Mini Player.app'.'"');
+    exec('open "'.'./App/'.$theme_color.'/Spotify Mini Player.app'.'"');
     //update settings
     $ret = updateSetting($w, 'theme_color', $theme_color);
 
@@ -443,19 +1534,30 @@ function createDebugFile($w)
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $oauth_client_secret = $settings->oauth_client_secret;
     $oauth_access_token = $settings->oauth_access_token;
     $oauth_refresh_token = $settings->oauth_refresh_token;
     $display_name = $settings->display_name;
     $userid = $settings->userid;
+    $theme_color = $settings->theme_color;
 
     exec('mkdir -p /tmp/spot_mini_debug');
     date_default_timezone_set('UTC');
     $date = date('Y-m-d H:i:s', time());
 
-    $output = 'Generated: '.$date."\n";
+    $output = "Please take time to describe your problem in a few lines:\n";
+
     $output = $output."----------------------------------------------\n";
+
+    $output = $output."\n\n\n\n";
+
+    $output = $output."----------------------------------------------\n";
+
+    $output = $output."\n\n\n";
+
+    $output = $output."-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n";
+    $output = $output.'Generated: '.$date."\n";
 
     // check for library update in progress
     if (file_exists($w->data().'/update_library_in_progress')) {
@@ -520,6 +1622,10 @@ function createDebugFile($w)
         copy(exec('pwd').'/packal/package.xml', '/tmp/spot_mini_debug/package.xml');
     }
 
+    if (!file_exists($w->data().'/users')) {
+        $output = $output.'The directory '.$w->data()."/users is not present\n";
+    }
+
     $output = $output.exec('uname -a');
     $output = $output."\n";
     $output = $output.exec('sw_vers -productVersion');
@@ -534,10 +1640,19 @@ function createDebugFile($w)
     $output = $output."\n";
     $output = $output.'alfred_debug:'.getenv('alfred_debug');
     $output = $output."\n";
-    if (!$use_mopidy) {
+    if ($output_application != 'MOPIDY') {
         $output = $output.'Spotify desktop version:'.exec("osascript -e 'tell application \"Spotify\" to version'");
     } else {
         $output = $output.'Mopidy version:'.invokeMopidyMethod($w, 'core.get_version', array(), false);
+    }
+    $output = $output."\n";
+
+
+    exec('/usr/bin/xattr "'.'./App/'.$theme_color.'/Spotify Mini Player.app'.'"',$response);
+    $output = $output."xattr Spotify Mini Player.app returned: ";
+    foreach($response as $line) {  
+        $output = $output.$line;
+        $output = $output."\n";
     }
     $output = $output."\n";
 
@@ -548,8 +1663,6 @@ function createDebugFile($w)
     $output = $output.exec("curl --upload-file /tmp/spot_mini_debug.zip https://transfer.sh/spot_mini_debug_$userid.zip");
 
     exec('cd /tmp;rm -rf spot_mini_debug.zip spot_mini_debug');
-
-    $output = $output."\n----------------------------------------------\nCan you describe the problem in a few lines:\n";
 
     exec('echo "'.$output.'" | pbcopy');
 
@@ -599,6 +1712,79 @@ function getCurrentTrackInfoWithMopidy($w, $displayError = true)
 
     return ''.$track_name.'▹'.$artist_name.'▹'.$album_name.'▹'.$state.'▹'.$track_uri.'▹'.$length.'▹'.'0';
 }
+
+/**
+ * getCurrentTrackInfoWithSpotifyConnect function.
+ *
+ * @param mixed $w
+ * @param bool  $displayError (default: true)
+ */
+ function getCurrentTrackInfoWithSpotifyConnect($w, $displayError = true)
+ {
+    // Read settings from JSON
+    $settings = getSettings($w);
+    $country_code = $settings->country_code;
+
+    $track_name = '';
+    $artist_name = '';
+    $album_name = '';
+    $track_uri = '';
+    $length = 0;
+
+    $retry = true;
+    $nb_retry = 0;
+    while ($retry) {
+        try {
+            $api = getSpotifyWebAPI($w);
+
+            $current_track_info = $api->getMyCurrentTrack(array(
+            'market' => $country_code,
+            ));
+
+            $retry = false;
+
+            $track_name = $current_track_info->item->name;
+            $artist_name = $current_track_info->item->artists[0]->name;
+            $album_name = $current_track_info->item->album->name;
+            $is_playing = $current_track_info->is_playing;
+            if ($is_playing) {
+                $state = 'playing';
+            } else {
+                $state = 'paused';
+            }
+            $track_uri = $current_track_info->item->uri;
+            $length = ($current_track_info->item->duration_ms);
+            $popularity = $current_track_info->item->popularity;
+        
+            $retArr = array(''.$track_name.'▹'.$artist_name.'▹'.$album_name.'▹'.$state.'▹'.$track_uri.'▹'.$length.'▹'.$popularity);
+            return ''.$track_name.'▹'.$artist_name.'▹'.$album_name.'▹'.$state.'▹'.$track_uri.'▹'.$length.'▹'.$popularity;
+        } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 202) {
+                // retry
+                if ($nb_retry > 2) {
+                    $retry = false;
+
+                    return 'connect_stopped';
+                }
+                ++$nb_retry;
+                sleep(5);
+            } else {
+                $retry = false;
+
+                return 'connect_stopped';
+            }
+            return 'connect_stopped';
+        }
+    }
+ }
 
 /**
  * playUriWithMopidyWithoutClearing function.
@@ -756,9 +1942,9 @@ function addPlaylistToPlayQueue($w, $playlist_uri, $playlist_name)
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
 
-    if (!$use_mopidy) {
+    if ($output_application != 'MOPIDY') {
         $tracks = getThePlaylistFullTracks($w, $playlist_uri);
         if ($tracks == false) {
             displayNotificationWithArtwork($w, 'Cannot get tracks for playlist '.$playlist_name, './images/warning.png', 'Error!');
@@ -794,9 +1980,9 @@ function addAlbumToPlayQueue($w, $album_uri, $album_name)
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
 
-    if (!$use_mopidy) {
+    if ($output_application != 'MOPIDY') {
         $tracks = getTheAlbumFullTracks($w, $album_uri);
         if ($tracks == false) {
             displayNotificationWithArtwork($w, 'Cannot get tracks for album '.$album_name, './images/warning.png', 'Error!');
@@ -834,10 +2020,10 @@ function addArtistToPlayQueue($w, $artist_uri, $artist_name, $country_code)
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $country_code = $settings->country_code;
 
-    if (!$use_mopidy) {
+    if ($output_application != 'MOPIDY') {
         $tracks = getTheArtistFullTracks($w, $artist_uri, $country_code);
         if ($tracks == false) {
             displayNotificationWithArtwork($w, 'Cannot get tracks for artist '.$artist_name, './images/warning.png', 'Error!');
@@ -878,10 +2064,10 @@ function addTrackToPlayQueue($w, $track_uri, $track_name, $artist_name, $album_n
     // Read settings from JSON
 
     $settings = getSettings($w);
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
 
     $track = new stdClass();
-    if (!$use_mopidy) {
+    if ($output_application != 'MOPIDY') {
         $tracks = array();
         $track = getTheFullTrack($w, $track_uri, $country_code);
         if ($track == false) {
@@ -919,7 +2105,7 @@ function addTrackToPlayQueue($w, $track_uri, $track_name, $artist_name, $album_n
     } else {
         // replace current track by new track
         $playqueue->tracks[$playqueue->current_track_index] = $track;
-        if (!$use_mopidy) {
+        if ($output_application != 'MOPIDY') {
             $tracks = $playqueue->tracks;
         }
         if ($playqueue->type != '') {
@@ -954,12 +2140,27 @@ function updateCurrentTrackIndexFromPlayQueue($w)
     if ($playqueue == false) {
         displayNotificationWithArtwork($w, 'No play queue yet', './images/warning.png', 'Error!');
     }
-    exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
-    if ($retVal != 0) {
-        displayNotificationWithArtwork($w, 'AppleScript Exception: '.htmlspecialchars($retArr[0]).' use spot_mini_debug command', './images/warning.png', 'Error!');
-        exec("osascript -e 'tell application \"Alfred 3\" to search \"".getenv('c_spot_mini_debug').' AppleScript Exception: '.htmlspecialchars($retArr[0])."\"'");
 
-        return;
+    // Read settings from JSON
+
+    $settings = getSettings($w);
+    
+    $output_application = $settings->output_application;
+    
+
+    if ($output_application == 'MOPIDY') {
+        $retArr = array(getCurrentTrackInfoWithMopidy($w));
+    } else if($output_application == 'APPLESCRIPT') {
+        // get info on current song
+        exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
+        if ($retVal != 0) {
+            displayNotificationWithArtwork($w, 'AppleScript Exception: '.htmlspecialchars($retArr[0]).' use spot_mini_debug command', './images/warning.png', 'Error!');
+            exec("osascript -e 'tell application \"Alfred 3\" to search \"".getenv('c_spot_mini_debug').' AppleScript Exception: '.htmlspecialchars($retArr[0])."\"'");
+
+            return;
+        }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1148,7 +2349,7 @@ function playAlfredPlaylist($w)
     $is_alfred_playlist_active = $settings->is_alfred_playlist_active;
     $alfred_playlist_uri = $settings->alfred_playlist_uri;
     $alfred_playlist_name = $settings->alfred_playlist_name;
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $use_artworks = $settings->use_artworks;
 
     if ($alfred_playlist_uri == '' || $alfred_playlist_name == '') {
@@ -1156,13 +2357,19 @@ function playAlfredPlaylist($w)
 
         return;
     }
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         playUriWithMopidy($w, $alfred_playlist_uri);
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         exec("osascript -e 'tell application \"Spotify\" to play track \"$alfred_playlist_uri\"'");
-        addPlaylistToPlayQueue($w, $alfred_playlist_uri, $alfred_playlist_name);
+    } else {
+        $device_id = getSpotifyConnectCurrentDeviceId($w);
+        if($device_id != '') {
+            playTrackSpotifyConnect($w, $device_id, '', $alfred_playlist_uri);
+        } else {
+            displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+        }
     }
-
+    addPlaylistToPlayQueue($w, $alfred_playlist_uri, $alfred_playlist_name);
     $playlist_artwork_path = getPlaylistArtwork($w, $alfred_playlist_uri, true, true, $use_artworks);
     displayNotificationWithArtwork($w, '🔈 Alfred Playlist '.$alfred_playlist_name, $playlist_artwork_path, 'Play Alfred Playlist');
 }
@@ -1179,11 +2386,12 @@ function lookupCurrentArtist($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1192,6 +2400,8 @@ function lookupCurrentArtist($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1231,11 +2441,12 @@ function displayCurrentArtistBiography($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1244,6 +2455,8 @@ function displayCurrentArtistBiography($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1277,13 +2490,14 @@ function playCurrentArtist($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $country_code = $settings->country_code;
     $use_artworks = $settings->use_artworks;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1292,6 +2506,8 @@ function playCurrentArtist($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1307,12 +2523,19 @@ function playCurrentArtist($w)
 
             return;
         }
-        if ($use_mopidy) {
+        if ($output_application == 'MOPIDY') {
             playUriWithMopidy($w, $artist_uri);
-        } else {
+        } else if($output_application == 'APPLESCRIPT') {
             exec("osascript -e 'tell application \"Spotify\" to play track \"$artist_uri\"'");
-            addArtistToPlayQueue($w, $artist_uri, escapeQuery($results[1]), $country_code);
+        } else {
+            $device_id = getSpotifyConnectCurrentDeviceId($w);
+            if($device_id != '') {
+                playTrackSpotifyConnect($w, $device_id, '', $artist_uri);
+            } else {
+                displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+            }
         }
+        addArtistToPlayQueue($w, $artist_uri, escapeQuery($results[1]), $country_code);
         displayNotificationWithArtwork($w, '🔈 Artist '.escapeQuery($results[1]), getArtistArtwork($w, $artist_uri, $results[1], true, false, false, $use_artworks), 'Play Current Artist');
     } else {
         displayNotificationWithArtwork($w, 'No artist is playing', './images/warning.png');
@@ -1331,12 +2554,13 @@ function playCurrentAlbum($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $use_artworks = $settings->use_artworks;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1345,6 +2569,8 @@ function playCurrentAlbum($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1356,7 +2582,20 @@ function playCurrentAlbum($w)
 
             return;
         }
-        exec("osascript -e 'tell application \"Spotify\" to play track \"$album_uri\"'");
+
+        if ($output_application == 'MOPIDY') {
+            playUriWithMopidy($w, $album_uri);
+        } else if($output_application == 'APPLESCRIPT') {
+            exec("osascript -e 'tell application \"Spotify\" to play track \"$album_uri\"'");
+        } else {
+            $device_id = getSpotifyConnectCurrentDeviceId($w);
+            if($device_id != '') {
+                playTrackSpotifyConnect($w, $device_id, '', $album_uri);
+            } else {
+                displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+            }
+        }
+        addAlbumToPlayQueue($w, $album_uri, escapeQuery($results[2]));        
         displayNotificationWithArtwork($w, '🔈 Album '.escapeQuery($results[2]), getTrackOrAlbumArtwork($w, $results[4], true, false, false, $use_artworks), 'Play Current Album', $use_artworks);
     } else {
         displayNotificationWithArtwork($w, 'No track is playing', './images/warning.png');
@@ -1375,11 +2614,12 @@ function addCurrentTrackTo($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1388,6 +2628,8 @@ function addCurrentTrackTo($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1401,7 +2643,7 @@ function addCurrentTrackTo($w)
             $country_code = $settings->country_code;
             // local track, look it up online
 
-            $query = 'track:'.strtolower(escapeQuery($results[0])).' artist:'.strtolower(escapeQuery($results[1]));
+            $query = 'track:'.escapeQuery($results[0]).' artist:'.escapeQuery($results[1]);
             $searchResults = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($searchResults) > 0) {
@@ -1437,11 +2679,11 @@ function removeCurrentTrackFrom($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1493,11 +2735,12 @@ function addCurrentTrackToAlfredPlaylist($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1506,6 +2749,8 @@ function addCurrentTrackToAlfredPlaylist($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1531,7 +2776,7 @@ function addCurrentTrackToAlfredPlaylist($w)
         if (isset($tmp[1]) && $tmp[1] == 'local') {
             // local track, look it up online
 
-            $query = 'track:'.strtolower(escapeQuery($results[0])).' artist:'.strtolower(escapeQuery($results[1]));
+            $query = 'track:'.escapeQuery($results[0]).' artist:'.escapeQuery($results[1]);
             $searchResults = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($searchResults) > 0) {
@@ -1574,12 +2819,13 @@ function addCurrentTrackToYourMusic($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $use_artworks = $settings->use_artworks;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -1588,6 +2834,8 @@ function addCurrentTrackToYourMusic($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -1601,7 +2849,7 @@ function addCurrentTrackToYourMusic($w)
             $country_code = $settings->country_code;
             // local track, look it up online
 
-            $query = 'track:'.strtolower(escapeQuery($results[0])).' artist:'.strtolower(escapeQuery($results[1]));
+            $query = 'track:'.escapeQuery($results[0]).' artist:'.escapeQuery($results[1]);
             $searchResults = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($searchResults) > 0) {
@@ -1745,9 +2993,14 @@ function addTracksToPlaylist($w, $tracks, $playlist_uri, $playlist_name, $allow_
                 if (count($output)) {
                     // refresh api
                     $api = getSpotifyWebAPI($w, $api);
-                    $api->addUserPlaylistTracks(urlencode($userid), $tmp[4], $output, array(
-                            'position' => 0,
-                        ));
+
+                    if(getenv('append_to_playlist_when_adding_tracks') == 0) {
+                        $api->addUserPlaylistTracks(urlencode($userid), $tmp[4], $output, array(
+                                'position' => 0,
+                            ));
+                    } else {
+                        $api->addUserPlaylistTracks(urlencode($userid), $tmp[4], $output);
+                    }
                     ++$i;
                 }
                 /*
@@ -1913,7 +3166,7 @@ function getRandomAlbum($w)
                 PDO::ATTR_PERSISTENT => true,
             ));
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $getTracks = 'select album_uri,album_name,artist_name from tracks order by random() limit 1';
+        $getTracks = 'select album_uri,album_name,artist_name from tracks where yourmusic=1 order by random() limit 1';
         $stmt = $db->prepare($getTracks);
         $stmt->execute();
         $track = $stmt->fetch();
@@ -1935,15 +3188,24 @@ function getRandomAlbum($w)
  */
 function getArtistUriFromTrack($w, $track_uri)
 {
+    // Read settings from JSON
+
+    $settings = getSettings($w);
+    $country_code = $settings->country_code;
+
     try {
         $tmp = explode(':', $track_uri);
+
+        if (isset($tmp[1]) && $tmp[1] == 'ad') {
+            return false;
+        }
 
         if (isset($tmp[1]) && $tmp[1] == 'local') {
             // local track, look it up online
             // spotify:local:The+D%c3%b8:On+My+Shoulders+-+Single:On+My+Shoulders:318
             // spotify:local:Damien+Rice:B-Sides:Woman+Like+a+Man+%28Live%2c+Unplugged%29:284
 
-            $query = 'track:'.urldecode(strtolower($tmp[4])).' artist:'.urldecode(strtolower($tmp[2]));
+            $query = 'track:'.urldecode($tmp[4]).' artist:'.urldecode($tmp[2]);
             $results = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($results) > 0) {
@@ -1966,8 +3228,8 @@ function getArtistUriFromTrack($w, $track_uri)
 
         return $artist->uri;
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(getArtistUriFromTrack): (exception '.print_r($e).')';
-        handleSpotifyWebAPIException($w, $e);
+        //logMsg( 'Error(getArtistUriFromTrack): (exception '.print_r($e).')');
+        //handleSpotifyWebAPIException($w, $e);
     }
 
     return false;
@@ -2026,7 +3288,7 @@ function getAlbumUriFromTrack($w, $track_uri)
             // spotify:local:The+D%c3%b8:On+My+Shoulders+-+Single:On+My+Shoulders:318
             // spotify:local:Damien+Rice:B-Sides:Woman+Like+a+Man+%28Live%2c+Unplugged%29:284
 
-            $query = 'track:'.urldecode(strtolower($tmp[4])).' artist:'.urldecode(strtolower($tmp[2]));
+            $query = 'track:'.urldecode($tmp[4]).' artist:'.urldecode($tmp[2]);
             $results = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($results) > 0) {
@@ -2128,11 +3390,12 @@ function createRadioArtistPlaylistForCurrentArtist($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -2141,6 +3404,8 @@ function createRadioArtistPlaylistForCurrentArtist($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -2182,6 +3447,7 @@ function createRadioArtistPlaylist($w, $artist_name, $artist_uri)
     $is_autoplay_playlist = $settings->is_autoplay_playlist;
     $country_code = $settings->country_code;
     $use_artworks = $settings->use_artworks;
+    $output_application = $settings->output_application;
 
     $public = false;
     if ($is_public_playlists) {
@@ -2197,7 +3463,7 @@ function createRadioArtistPlaylist($w, $artist_name, $artist_uri)
             'limit' => $radio_number_tracks,
         ));
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(createRadioArtistPlaylist): (exception '.print_r($e).')';
+        logMsg('Error(createRadioArtistPlaylist): (exception '.print_r($e).')');
         handleSpotifyWebAPIException($w, $e);
         exit;
     }
@@ -2225,12 +3491,30 @@ function createRadioArtistPlaylist($w, $artist_name, $artist_uri)
         if (is_numeric($ret) && $ret > 0) {
             if ($is_autoplay_playlist) {
                 sleep(2);
-                exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+
+                if ($output_application == 'MOPIDY') {
+                    playUriWithMopidy($w, $json->uri);
+                } else if($output_application == 'APPLESCRIPT') {
+                    exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+                } else {
+                    $device_id = getSpotifyConnectCurrentDeviceId($w);
+                    if($device_id != '') {
+                        playTrackSpotifyConnect($w, $device_id, '', $json->uri);
+                    } else {
+                        displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+                    }
+                }
+                addPlaylistToPlayQueue($w, $json->uri, $json->name);
                 $playlist_artwork_path = getPlaylistArtwork($w, $json->uri, true, false, $use_artworks);
                 displayNotificationWithArtwork($w, '🔈 Playlist '.$json->name, $playlist_artwork_path, 'Launch Artist Radio Playlist');
             }
-            refreshLibrary($w);
-
+            if(getenv('add_created_radio_playlist_to_library') == 0) {
+                // do not add the playlist to the library
+                unfollowThePlaylist($w, $json->uri);
+            } else {
+                refreshLibrary($w);
+            }
+            
             return;
         } elseif (is_numeric($ret) && $ret == 0) {
             displayNotificationWithArtwork($w, 'Playlist '.$json->name.' cannot be added', './images/warning.png', 'Error!');
@@ -2238,7 +3522,7 @@ function createRadioArtistPlaylist($w, $artist_name, $artist_uri)
             return;
         }
     } else {
-        displayNotificationWithArtwork($w, 'Artist was not found in Echo Nest', './images/warning.png', 'Error!');
+        displayNotificationWithArtwork($w, 'Artist was not found with Spotify API', './images/warning.png', 'Error!');
 
         return false;
     }
@@ -2263,6 +3547,7 @@ function createCompleteCollectionArtistPlaylist($w, $artist_name, $artist_uri)
     $is_public_playlists = $settings->is_public_playlists;
     $is_autoplay_playlist = $settings->is_autoplay_playlist;
     $use_artworks = $settings->use_artworks;
+    $output_application = $settings->output_application;
 
     $public = false;
     if ($is_public_playlists) {
@@ -2302,7 +3587,19 @@ function createCompleteCollectionArtistPlaylist($w, $artist_name, $artist_uri)
         if (is_numeric($ret) && $ret > 0) {
             if ($is_autoplay_playlist) {
                 sleep(2);
-                exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+                if ($output_application == 'MOPIDY') {
+                    playUriWithMopidy($w, $json->uri);
+                } else if($output_application == 'APPLESCRIPT') {
+                    exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+                } else {
+                    $device_id = getSpotifyConnectCurrentDeviceId($w);
+                    if($device_id != '') {
+                        playTrackSpotifyConnect($w, $device_id, '', $json->uri);
+                    } else {
+                        displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+                    }
+                }
+                addPlaylistToPlayQueue($w, $json->uri, $json->name);
                 $playlist_artwork_path = getPlaylistArtwork($w, $json->uri, true, false, $use_artworks);
                 displayNotificationWithArtwork($w, '🔈 Playlist '.$json->name, $playlist_artwork_path, 'Launch Complete Collection Playlist');
             }
@@ -2335,11 +3632,12 @@ function createRadioSongPlaylistForCurrentTrack($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -2348,6 +3646,8 @@ function createRadioSongPlaylistForCurrentTrack($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
@@ -2378,6 +3678,7 @@ function createRadioSongPlaylist($w, $track_name, $track_uri, $artist_name)
     $is_public_playlists = $settings->is_public_playlists;
     $is_autoplay_playlist = $settings->is_autoplay_playlist;
     $use_artworks = $settings->use_artworks;
+    $output_application = $settings->output_application;
 
     $public = false;
     if ($is_public_playlists) {
@@ -2390,7 +3691,7 @@ function createRadioSongPlaylist($w, $track_name, $track_uri, $artist_name)
         // spotify:local:The+D%c3%b8:On+My+Shoulders+-+Single:On+My+Shoulders:318
         // spotify:local:Damien+Rice:B-Sides:Woman+Like+a+Man+%28Live%2c+Unplugged%29:284
 
-        $query = 'track:'.urldecode(strtolower($tmp[4])).' artist:'.urldecode(strtolower($tmp[2]));
+        $query = 'track:'.urldecode($tmp[4]).' artist:'.urldecode($tmp[2]);
         $results = searchWebApi($w, $country_code, $query, 'track', 1);
 
         if (count($results) > 0) {
@@ -2413,7 +3714,7 @@ function createRadioSongPlaylist($w, $track_name, $track_uri, $artist_name)
             'limit' => $radio_number_tracks,
         ));
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(createRadioSongPlaylist): (exception '.print_r($e).')';
+        logMsg( 'Error(createRadioSongPlaylist): (exception '.print_r($e).')');
         handleSpotifyWebAPIException($w, $e);
         exit;
     }
@@ -2441,11 +3742,29 @@ function createRadioSongPlaylist($w, $track_name, $track_uri, $artist_name)
         if (is_numeric($ret) && $ret > 0) {
             if ($is_autoplay_playlist) {
                 sleep(2);
-                exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+
+                if ($output_application == 'MOPIDY') {
+                    playUriWithMopidy($w, $json->uri);
+                } else if($output_application == 'APPLESCRIPT') {
+                    exec("osascript -e 'tell application \"Spotify\" to play track \"$json->uri\"'");
+                } else {
+                    $device_id = getSpotifyConnectCurrentDeviceId($w);
+                    if($device_id != '') {
+                        playTrackSpotifyConnect($w, $device_id, '', $json->uri);
+                    } else {
+                        displayNotificationWithArtwork($w, 'No Spotify Connect device is available', './images/warning.png', 'Error!');
+                    }
+                }
+                addPlaylistToPlayQueue($w, $json->uri, $json->name);
                 $playlist_artwork_path = getPlaylistArtwork($w, $json->uri, true, false, $use_artworks);
                 displayNotificationWithArtwork($w, '🔈 Playlist '.$json->name, $playlist_artwork_path, 'Launch Radio Playlist');
             }
-            refreshLibrary($w);
+            if(getenv('add_created_radio_playlist_to_library') == 0) {
+                // do not add the playlist to the library
+                unfollowThePlaylist($w, $json->uri);
+            } else {
+                refreshLibrary($w);
+            }
 
             return;
         } elseif (is_numeric($ret) && $ret == 0) {
@@ -2454,7 +3773,7 @@ function createRadioSongPlaylist($w, $track_name, $track_uri, $artist_name)
             return;
         }
     } else {
-        displayNotificationWithArtwork($w, 'Track was not found in Echo Nest', './images/warning.png', 'Error!');
+        displayNotificationWithArtwork($w, 'Track was not found using Spotify API', './images/warning.png', 'Error!');
 
         return false;
     }
@@ -2612,7 +3931,7 @@ function getTheArtistAlbums($w, $artist_uri, $country_code, $actionMode = false,
             echo $w2->toxml();
             exit;
         } else {
-            echo 'Error(getTheArtistAlbums): (exception '.print_r($e).')';
+            logMsg( 'Error(getTheArtistAlbums): (exception '.print_r($e).')');
             handleSpotifyWebAPIException($w, $e);
 
             return false;
@@ -2690,7 +4009,7 @@ function getTheAlbumFullTracks($w, $album_uri, $actionMode = false)
             echo $w2->toxml();
             exit;
         } else {
-            echo 'Error(getTheAlbumFullTracks): (exception '.print_r($e).')';
+            logMsg( 'Error(getTheAlbumFullTracks): (exception '.print_r($e).')');
             handleSpotifyWebAPIException($w, $e);
 
             return false;
@@ -2793,7 +4112,7 @@ function getTheFullTrack($w, $track_uri, $country_code)
             // spotify:local:The+D%c3%b8:On+My+Shoulders+-+Single:On+My+Shoulders:318
             // spotify:local:Damien+Rice:B-Sides:Woman+Like+a+Man+%28Live%2c+Unplugged%29:284
 
-            $query = 'track:'.urldecode(strtolower($tmp[4])).' artist:'.urldecode(strtolower($tmp[2]));
+            $query = 'track:'.urldecode($tmp[4]).' artist:'.urldecode($tmp[2]);
             $results = searchWebApi($w, $country_code, $query, 'track', 1);
 
             if (count($results) > 0) {
@@ -2812,7 +4131,7 @@ function getTheFullTrack($w, $track_uri, $country_code)
 
         return $track;
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(getTheFullTrack): (exception '.print_r($e).')';
+        logMsg( 'Error(getTheFullTrack): (exception '.print_r($e).')');
         handleSpotifyWebAPIException($w, $e);
     }
 
@@ -3120,7 +4439,7 @@ function displayNotificationWithArtwork($w, $subtitle, $artwork, $title = 'Spoti
         if ($artwork != '' && file_exists($artwork)) {
             copy($artwork, '/tmp/tmp');
         }
-        exec("./terminal-notifier.app/Contents/MacOS/terminal-notifier -title '".$title."' -sender 'com.spotify.miniplayer.".$theme_color."' -contentImage '/tmp/tmp' -message '".$subtitle."'");
+        exec("./terminal-notifier.app/Contents/MacOS/terminal-notifier -title '".$title."' -sender 'com.spotify.miniplayer.".$theme_color."' -appIcon '/tmp/tmp' -message '".$subtitle."'");
     } else {
         exec('./src/growl_notification.ksh -t "'.$title.'" -s "'.$subtitle.'" >> "'.$w->cache().'/action.log" 2>&1 & ');
     }
@@ -3138,13 +4457,13 @@ function displayNotificationForCurrentTrack($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
     $is_display_rating = $settings->is_display_rating;
-    $use_artworks = $settings->use_artworks;
+    $use_artworks = $settings->use_artworks;    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -3153,11 +4472,28 @@ function displayNotificationForCurrentTrack($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
         $results = explode('▹', $retArr[count($retArr) - 1]);
-        displayNotificationWithArtwork($w, '🔈 '.escapeQuery($results[0]).' by '.escapeQuery($results[1]).' in album '.escapeQuery($results[2]), getTrackOrAlbumArtwork($w, $results[4], true, false, false, $use_artworks), 'Now Playing '.floatToStars(($results[6] / 100) ? $is_display_rating : 0).' ('.beautifyTime($results[5] / 1000).')');
+
+        $tmp = explode(':', $results[4]);
+
+        if (isset($tmp[1]) && $tmp[1] == 'ad') {
+            return;
+        }
+
+        // download artwork for current track view
+        $album_artwork_path = getTrackOrAlbumArtwork($w, $results[4], true, false, false, $use_artworks);
+        $artist_uri = getArtistUriFromTrack($w, $results[4]);
+        if ($artist_uri != false) {
+            $artist_artwork_path = getArtistArtwork($w, $artist_uri, $results[1], true, false, false, $use_artworks);
+        }
+        if (isset($results[0]) && $results[0] != '') {
+            displayNotificationWithArtwork($w, '🔈 '.escapeQuery($results[0]).' by '.escapeQuery($results[1]).' in album '.escapeQuery($results[2]), $album_artwork_path, 'Now Playing '.floatToStars(($results[6] / 100) ? $is_display_rating : 0).' ('.beautifyTime($results[5] / 1000).')');
+        }
     }
 }
 
@@ -3178,11 +4514,13 @@ function displayLyricsForCurrentTrack($w)
 
     $settings = getSettings($w);
 
-    $use_mopidy = $settings->use_mopidy;
+    $output_application = $settings->output_application;
+    $always_display_lyrics_in_browser = $settings->always_display_lyrics_in_browser;
+    
 
-    if ($use_mopidy) {
+    if ($output_application == 'MOPIDY') {
         $retArr = array(getCurrentTrackInfoWithMopidy($w));
-    } else {
+    } else if($output_application == 'APPLESCRIPT') {
         // get info on current song
         exec('./src/track_info.ksh 2>&1', $retArr, $retVal);
         if ($retVal != 0) {
@@ -3191,11 +4529,26 @@ function displayLyricsForCurrentTrack($w)
 
             return;
         }
+    } else {
+        $retArr = array(getCurrentTrackInfoWithSpotifyConnect($w));
     }
 
     if (substr_count($retArr[count($retArr) - 1], '▹') > 0) {
         $results = explode('▹', $retArr[count($retArr) - 1]);
-        exec("osascript -e 'tell application \"Alfred 3\" to search \"".getenv('c_spot_mini').' Lyrics▹'.$results[4].'∙'.escapeQuery($results[1]).'∙'.escapeQuery($results[0])."\"'");
+
+        if($always_display_lyrics_in_browser == false) {
+            exec("osascript -e 'tell application \"Alfred 3\" to search \"".getenv('c_spot_mini').' Lyrics▹'.$results[4].'∙'.escapeQuery($results[1]).'∙'.escapeQuery($results[0])."\"'");
+        } else {
+            // display lyrics in default browser
+            list($lyrics_url, $lyrics) = getLyrics($w, escapeQuery($results[1]), escapeQuery($results[0]));
+
+            if ($lyrics_url != false) {
+                exec('open '.$lyrics_url); 
+            } else {
+                displayNotificationWithArtwork($w, 'No lyrics found!', './images/warning.png', 'Error!');
+            }
+        }
+
     } else {
         displayNotificationWithArtwork($w, 'There is not track currently playing', './images/warning.png', 'Error!');
     }
@@ -3266,7 +4619,9 @@ function downloadArtworks($w)
             $nb_artworks_total += intval($count[0]);
 
             if ($nb_artworks_total != 0) {
-                displayNotificationWithArtwork($w, 'Start downloading '.$nb_artworks_total.' artworks', './images/artworks.png', 'Artworks');
+                if(getenv('reduce_notifications') == 0) {
+                    displayNotificationWithArtwork($w, 'Start downloading '.$nb_artworks_total.' artworks', './images/artworks.png', 'Artworks');
+                }
 
                 // artists
                 $getArtists = 'select artist_uri,artist_name from artists where already_fetched=0';
@@ -3371,11 +4726,11 @@ function downloadArtworks($w)
     deleteTheFile($w->data().'/download_artworks_in_progress');
     logMsg('End of Download Artworks');
     if ($nb_artworks_total != 0) {
-        $elapsed_time = time() - $words[3];
-        displayNotificationWithArtwork($w, 'All artworks have been downloaded ('.$nb_artworks_total.' artworks) - took '.beautifyTime($elapsed_time, true), './images/artworks.png', 'Artworks');
-        if ($userid != 'vdesabou') {
-            stathat_ez_count('AlfredSpotifyMiniPlayer', 'artworks', $nb_artworks_total);
+        if(getenv('reduce_notifications') == 0) {
+            $elapsed_time = time() - $words[3];
+            displayNotificationWithArtwork($w, 'All artworks have been downloaded ('.$nb_artworks_total.' artworks) - took '.beautifyTime($elapsed_time, true), './images/artworks.png', 'Artworks');
         }
+        stathat_ez_count('AlfredSpotifyMiniPlayer', 'artworks', $nb_artworks_total);
     }
 
     return true;
@@ -3799,7 +5154,7 @@ function getArtworkURL($w, $type, $id, $highRes = false)
             $api = getSpotifyWebAPI($w);
             $track = $api->getTrack($id);
         } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-            echo 'Error(getArtworkURL): (exception '.print_r($e).')';
+            logMsg('Error(getArtworkURL track): (exception '.print_r($e).')');
 
             return $url;
         }
@@ -3839,8 +5194,7 @@ function getArtworkURL($w, $type, $id, $highRes = false)
             $api = getSpotifyWebAPI($w);
             $album = $api->getAlbum($id);
         } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-            echo 'Error(getArtworkURL): (exception '.print_r($e).')';
-
+            logMsg('Error(getArtworkURL album): (exception '.print_r($e).')');
             return $url;
         }
         if (isset($album->images)) {
@@ -3897,7 +5251,7 @@ function getPlaylistArtworkURL($w, $playlist_uri)
                 ),
             ));
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(getPlaylistArtworkURL): (exception '.print_r($e).')';
+        logMsg( 'Error(getPlaylistArtworkURL): (exception '.print_r($e).')');
 
         return $url;
     }
@@ -3938,7 +5292,7 @@ function getArtistArtworkURL($w, $artist_id)
         $api = getSpotifyWebAPI($w);
         $artist = $api->getArtist($artist_id);
     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
-        echo 'Error(getArtistArtworkURL): (exception '.print_r($e).')';
+        logMsg( 'Error(getArtistArtworkURL): (exception '.print_r($e).')');
 
         return $url;
     }
@@ -4021,8 +5375,11 @@ function updateLibrary($w)
         $db->query('PRAGMA default_cache_size=700000');
         $db->query('PRAGMA cache_size=700000');
         $db->query('PRAGMA compile_options');
+        // Problems with search on russian language #210
+        // thanks to https://blog.amartynov.ru/php-sqlite-case-insensitive-like-utf8/
+        $db->sqliteCreateFunction('like', "lexa_ci_utf8_like", 2);
     } catch (PDOException $e) {
-        echo 'Error(updateLibrary): (exception '.print_r($e).")\n";
+        logMsg( 'Error(updateLibrary): (exception '.print_r($e).')');
         handleDbIssuePdoEcho($db, $w);
         $db = null;
 
@@ -4103,12 +5460,15 @@ function updateLibrary($w)
                 $retry = false;
             } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
                 logMsg('Error(getUserPlaylists): retry '.$nb_retry.' (exception '.print_r($e).')');
-                 if ($e->getCode() == 429) { // 429 is Too Many Requests
+                if ($e->getCode() == 429) { // 429 is Too Many Requests
                     $lastResponse = $api->getRequest()->getLastResponse();
                     $retryAfter = $lastResponse['headers']['Retry-After'];
                     sleep(retryAfter);
-                 } else if ($e->getCode() == 404 || $e->getCode() == 500
-                    || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                } else if ($e->getCode() == 404) {
+                        // skip
+                        break;
+                } else if ($e->getCode() == 500
+                    || $e->getCode() == 502 || $e->getCode() == 503) {
                     // retry
                     if ($nb_retry > 20) {
                         handleSpotifyWebAPIException($w, $e);
@@ -4156,27 +5516,30 @@ function updateLibrary($w)
             } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
                 logMsg('Error(getMySavedTracks): retry '.$nb_retry.' (exception '.print_r($e).')');
 
-                 if ($e->getCode() == 429) { // 429 is Too Many Requests
-                    $lastResponse = $api->getRequest()->getLastResponse();
-                    $retryAfter = $lastResponse['headers']['Retry-After'];
-                    sleep(retryAfter);
-                 } else if ($e->getCode() == 404 || $e->getCode() == 500
-                    || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
-                    // retry
-                    if ($nb_retry > 20) {
-                        handleSpotifyWebAPIException($w, $e);
-                        $retry = false;
-
-                        return false;
-                    }
-                    ++$nb_retry;
-                    sleep(15);
-                } else {
+                if ($e->getCode() == 429) { // 429 is Too Many Requests
+                $lastResponse = $api->getRequest()->getLastResponse();
+                $retryAfter = $lastResponse['headers']['Retry-After'];
+                sleep(retryAfter);
+                } else if ($e->getCode() == 404) {
+                    // skip
+                    break;
+                } else if ($e->getCode() == 500
+                || $e->getCode() == 502 || $e->getCode() == 503) {
+                // retry
+                if ($nb_retry > 20) {
                     handleSpotifyWebAPIException($w, $e);
                     $retry = false;
 
                     return false;
                 }
+                ++$nb_retry;
+                sleep(15);
+            } else {
+                handleSpotifyWebAPIException($w, $e);
+                $retry = false;
+
+                return false;
+            }
             }
         }
 
@@ -4289,8 +5652,11 @@ function updateLibrary($w)
                         $lastResponse = $api->getRequest()->getLastResponse();
                         $retryAfter = $lastResponse['headers']['Retry-After'];
                         sleep(retryAfter);
-                     } else if ($e->getCode() == 404 || $e->getCode() == 500
-                        || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                     } else if ($e->getCode() == 404) {
+                            // skip
+                            break;
+                     } else if ($e->getCode() == 500
+                        || $e->getCode() == 502 || $e->getCode() == 503) {
                         // retry
                         if ($nb_retry > 20) {
                             handleSpotifyWebAPIException($w, $e);
@@ -4662,6 +6028,9 @@ function updateLibrary($w)
         }
     }
     deleteTheFile($w->data().'/update_library_in_progress');
+
+    // in case of new user, force creation of links and current_user.json
+    getCurrentUser($w);
 }
 
 /**
@@ -4837,12 +6206,15 @@ function refreshLibrary($w)
             } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
                 logMsg('Error(getUserPlaylists): retry '.$nb_retry.' (exception '.print_r($e).')');
 
-                 if ($e->getCode() == 429) { // 429 is Too Many Requests
+                if ($e->getCode() == 429) { // 429 is Too Many Requests
                     $lastResponse = $api->getRequest()->getLastResponse();
                     $retryAfter = $lastResponse['headers']['Retry-After'];
                     sleep(retryAfter);
-                 } else if ($e->getCode() == 404 || $e->getCode() == 500
-                    || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                } else if ($e->getCode() == 404) {
+                        // skip
+                        break;
+                } else if ($e->getCode() == 500
+                    || $e->getCode() == 502 || $e->getCode() == 503) {
                     // retry
                     if ($nb_retry > 20) {
                         handleSpotifyWebAPIException($w, $e);
@@ -4938,12 +6310,15 @@ function refreshLibrary($w)
                     } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
                         logMsg('Error(getUserPlaylistTracks): retry '.$nb_retry.' (exception '.print_r($e).')');
 
-                         if ($e->getCode() == 429) { // 429 is Too Many Requests
+                        if ($e->getCode() == 429) { // 429 is Too Many Requests
                             $lastResponse = $api->getRequest()->getLastResponse();
                             $retryAfter = $lastResponse['headers']['Retry-After'];
                             sleep(retryAfter);
-                         } else if ($e->getCode() == 404 || $e->getCode() == 500
-                            || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                        } else if ($e->getCode() == 404) {
+                                // skip
+                                break;
+                        } else if ($e->getCode() == 500
+                            || $e->getCode() == 502 || $e->getCode() == 503) {
                             // retry
                             if ($nb_retry > 20) {
                                 handleSpotifyWebAPIException($w, $e);
@@ -5196,12 +6571,15 @@ function refreshLibrary($w)
                         } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
                             logMsg('Error(getUserPlaylistTracks): retry '.$nb_retry.' (exception '.print_r($e).')');
 
-                             if ($e->getCode() == 429) { // 429 is Too Many Requests
+                            if ($e->getCode() == 429) { // 429 is Too Many Requests
                                 $lastResponse = $api->getRequest()->getLastResponse();
                                 $retryAfter = $lastResponse['headers']['Retry-After'];
                                 sleep(retryAfter);
-                             } else if ($e->getCode() == 404 || $e->getCode() == 500
-                                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                            } else if ($e->getCode() == 404) {
+                                    // skip
+                                    break;
+                            } else if ($e->getCode() == 500
+                                || $e->getCode() == 502 || $e->getCode() == 503) {
                                 // retry
                                 if ($nb_retry > 20) {
                                     handleSpotifyWebAPIException($w, $e);
@@ -5417,27 +6795,30 @@ function refreshLibrary($w)
         } catch (SpotifyWebAPI\SpotifyWebAPIException $e) {
             logMsg('Error(getMySavedTracks): retry '.$nb_retry.' (exception '.print_r($e).')');
 
-             if ($e->getCode() == 429) { // 429 is Too Many Requests
-                $lastResponse = $api->getRequest()->getLastResponse();
-                $retryAfter = $lastResponse['headers']['Retry-After'];
-                sleep(retryAfter);
-             } else if ($e->getCode() == 404 || $e->getCode() == 500
-                || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
-                // retry
-                if ($nb_retry > 20) {
-                    handleSpotifyWebAPIException($w, $e);
-                    $retry = false;
-
-                    return false;
-                }
-                ++$nb_retry;
-                sleep(15);
-            } else {
+            if ($e->getCode() == 429) { // 429 is Too Many Requests
+            $lastResponse = $api->getRequest()->getLastResponse();
+            $retryAfter = $lastResponse['headers']['Retry-After'];
+            sleep(retryAfter);
+            } else if ($e->getCode() == 404) {
+                // skip
+                break;
+            } else if ($e->getCode() == 500
+            || $e->getCode() == 502 || $e->getCode() == 503) {
+            // retry
+            if ($nb_retry > 20) {
                 handleSpotifyWebAPIException($w, $e);
                 $retry = false;
 
                 return false;
             }
+            ++$nb_retry;
+            sleep(15);
+        } else {
+            handleSpotifyWebAPIException($w, $e);
+            $retry = false;
+
+            return false;
+        }
         }
     }
 
@@ -5496,8 +6877,11 @@ function refreshLibrary($w)
                         $lastResponse = $api->getRequest()->getLastResponse();
                         $retryAfter = $lastResponse['headers']['Retry-After'];
                         sleep(retryAfter);
-                     } else if ($e->getCode() == 404 || $e->getCode() == 500
-                        || $e->getCode() == 502 || $e->getCode() == 503 || $e->getCode() == 0) {
+                     } else if ($e->getCode() == 404) {
+                            // skip
+                            break;
+                     } else if ($e->getCode() == 500
+                        || $e->getCode() == 502 || $e->getCode() == 503) {
                         // retry
                         if ($nb_retry > 20) {
                             handleSpotifyWebAPIException($w, $e);
@@ -5727,7 +7111,9 @@ function refreshLibrary($w)
         $message = 'No change';
     }
 
-    displayNotificationWithArtwork($w, $message.' - took '.beautifyTime($elapsed_time, true), './images/update.png', 'Library refreshed');
+    if(getenv('reduce_notifications') == 0) {
+        displayNotificationWithArtwork($w, $message.' - took '.beautifyTime($elapsed_time, true), './images/update.png', 'Library refreshed');
+    }
 
     if (file_exists($w->data().'/library_old.db')) {
         deleteTheFile($w->data().'/library_old.db');
@@ -5752,9 +7138,9 @@ function handleDbIssuePdoXml($dbhandle)
 {
     $errorInfo = $dbhandle->errorInfo();
     $w = new Workflows('com.vdesabou.spotify.mini.player');
-    $w->result(uniqid(), '', 'Database Error: '.$errorInfo[0].' '.$errorInfo[1].' '.$errorInfo[2], '', './images/warning.png', 'no', null, '');
-    $w->result(uniqid(), '', 'There is a problem with the library, try to re-create it.', 'Select Re-Create Library library below', './images/warning.png', 'no', null, '');
-    $w->result(uniqid(), serialize(array(
+    $w->result(null, '', 'Database Error: '.$errorInfo[0].' '.$errorInfo[1].' '.$errorInfo[2], '', './images/warning.png', 'no', null, '');
+    $w->result(null, '', 'There is a problem with the library, try to re-create it.', 'Select Re-Create Library library below', './images/warning.png', 'no', null, '');
+    $w->result(null, serialize(array(
                 '' /*track_uri*/,
                 '' /* album_uri */,
                 '' /* artist_uri */,
@@ -5839,15 +7225,27 @@ function handleSpotifyWebAPIException($w, $e)
 }
 
 /**
+ * floatToCircles function.
+ *
+ * @param mixed $decimal
+ */
+ function floatToCircles($decimal)
+ {
+     $squares = ($decimal < 1) ? floor($decimal * 10) : 10;
+ 
+     return str_repeat('●', $squares).str_repeat('○︎', 10 - $squares);
+ }
+
+/**
  * floatToSquares function.
  *
  * @param mixed $decimal
  */
-function floatToSquares($decimal)
+function floatToSquares($decimal, $numSquares = 10)
 {
-    $squares = ($decimal < 1) ? floor($decimal * 10) : 10;
+    $squares = ($decimal < 1) ? floor($decimal * $numSquares) : $numSquares;
 
-    return str_repeat('◼︎', $squares).str_repeat('◻︎', 10 - $squares);
+    return str_repeat('◼︎', $squares).str_repeat('◻︎', $numSquares - $squares);
 }
 
 /**
@@ -6282,6 +7680,291 @@ function deleteTheFile($filename)
 }
 
 /**
+ * getSpotifyCountryCodesList function.
+ *
+ */
+function getSpotifyCountryCodesList()
+{
+    // from https://gist.github.com/frankkienl/a594807bf0dcd23fdb1b
+    $spotify_country_codes = array(
+        //A
+        'AD',
+        'AE',
+        'AF',
+        'AG',
+        'AI',
+        'AL',
+        'AM',
+        'AO',
+        'AQ',
+        'AR',
+        'AS',
+        'AT',
+        'AU',
+        'AW',
+        'AX',
+        'AZ',
+        //B
+        'BA',
+        'BB',
+        'BD',
+        'BE',
+        'BF',
+        'BG',
+        'BH',
+        'BI',
+        'BJ',
+        'BL',
+        'BM',
+        'BN',
+        'BO',
+        'BQ',
+        'BR',
+        'BS',
+        'BT',
+        'BV',
+        'BW',
+        'BY',
+        'BZ',
+        //C
+        'CA',
+        'CC',
+        'CD',
+        'CF',
+        'CG',
+        'CH',
+        'CI',
+        'CK',
+        'CL',
+        'CM',
+        'CN',
+        'CO',
+        'CR',
+        'CU',
+        'CV',
+        'CW',
+        'CX',
+        'CY',
+        'CZ',
+        //D
+        'DE',
+        'DJ',
+        'DK',
+        'DM',
+        'DO',
+        'DZ',
+        //E
+        'EC',
+        'EE',
+        'EG',
+        'EH',
+        'ER',
+        'ES',
+        'ET',
+        //F
+        'FI',
+        'FJ',
+        'FK',
+        'FM',
+        'FO',
+        'FR',
+        //G
+        'GA',
+        'GB',
+        'GD',
+        'GE',
+        'GF',
+        'GG',
+        'GH',
+        'GI',
+        'GL',
+        'GM',
+        'GN',
+        'GP',
+        'GQ',
+        'GR',
+        'GS',
+        'GT',
+        'GU',
+        'GW',
+        'GY',
+        //H
+        'HK',
+        'HM',
+        'HN',
+        'HR',
+        'HT',
+        'HU',
+        //I
+        'ID',
+        'IE',
+        'IL',
+        'IM',
+        'IN',
+        'IO',
+        'IQ',
+        'IR',
+        'IS',
+        'IT',
+        //J
+        'JE',
+        'JM',
+        'JO',
+        'JP',
+        //K
+        'KE',
+        'KG',
+        'KH',
+        'KI',
+        'KM',
+        'KN',
+        'KP',
+        'KR',
+        'KW',
+        'KY',
+        'KZ',
+        //L
+        'LA',
+        'LB',
+        'LC',
+        'LI',
+        'LK',
+        'LR',
+        'LS',
+        'LT',
+        'LU',
+        'LV',
+        //M
+        'MA',
+        'MC',
+        'MD',
+        'ME',
+        'MF',
+        'MG',
+        'MH',
+        'MK',
+        'ML',
+        'MM',
+        'MN',
+        'MO',
+        'MP',
+        'MQ',
+        'MR',
+        'MS',
+        'MT',
+        'MU',
+        'MV',
+        'MW',
+        'MX',
+        'MY',
+        'MZ',
+        //N
+        'NA',
+        'NC',
+        'NE',
+        'NF',
+        'NG',
+        'NI',
+        'NL',
+        'NO',
+        'NP',
+        'NR',
+        'NU',
+        'NZ',
+        //O
+        'OM',
+        //P
+        'PA',
+        'PE',
+        'PF',
+        'PG',
+        'PH',
+        'PK',
+        'PL',
+        'PM',
+        'PN',
+        'PR',
+        'PS',
+        'PT',
+        'PW',
+        'PY',
+        //Q
+        'QA',
+        //R
+        'RE',
+        'RO',
+        'RS',
+        'RU',
+        'RW',
+        //S
+        'SA',
+        'SB',
+        'SC',
+        'SD',
+        'SE',
+        'SG',
+        'SH',
+        'SI',
+        'SJ',
+        'SK',
+        'SL',
+        'SM',
+        'SN',
+        'SO',
+        'SR',
+        'SS',
+        'ST',
+        'SV',
+        'SX',
+        'SY',
+        'SZ',
+        //T
+        'TC',
+        'TD',
+        'TF',
+        'TG',
+        'TH',
+        'TJ',
+        'TK',
+        'TL',
+        'TM',
+        'TN',
+        'TO',
+        'TR',
+        'TT',
+        'TW',
+        'TZ',
+        //U
+        'UA',
+        'UG',
+        'UM',
+        'US',
+        'UY',
+        'UZ',
+        //V
+        'VA',
+        'VC',
+        'VE',
+        'VG',
+        'VI',
+        'VN',
+        'VU',
+        //W
+        'WF',
+        'WS',
+        //Y
+        'YE',
+        'YT',
+        //Z
+        'ZA',
+        'ZM',
+        'ZW',
+    );
+
+    return $spotify_country_codes;
+}
+
+/**
  * getCountryName function.
  *
  * @param mixed $cc
@@ -6342,6 +8025,7 @@ function startswith($haystack, $needle)
     return substr($haystack, 0, strlen($needle)) === $needle;
 }
 
+
 /**
  * getSettings function.
  *
@@ -6372,7 +8056,7 @@ function getSettings($w)
             'userid' => '',
             'is_public_playlists' => 0,
             'quick_mode' => 0,
-            'use_mopidy' => 0,
+            'output_application' => 'APPLESCRIPT',
             'mopidy_server' => '127.0.0.1',
             'mopidy_port' => '6680',
             'volume_percent' => 20,
@@ -6381,6 +8065,8 @@ function getSettings($w)
             'use_growl' => 0,
             'use_facebook' => 0,
             'theme_color' => 'green',
+            'search_order' => 'playlist▹artist▹track▹album',
+            'always_display_lyrics_in_browser' => 0,
         );
 
         $ret = $w->write($default, 'settings.json');
@@ -6392,12 +8078,6 @@ function getSettings($w)
     // add quick_mode if needed
     if (!isset($settings->quick_mode)) {
         updateSetting($w, 'quick_mode', 0);
-        $settings = $w->read('settings.json');
-    }
-
-    // add usemopidy if needed
-    if (!isset($settings->use_mopidy)) {
-        updateSetting($w, 'use_mopidy', 0);
         $settings = $w->read('settings.json');
     }
 
@@ -6455,6 +8135,29 @@ function getSettings($w)
         $settings = $w->read('settings.json');
     }
 
+    // add search_order if needed
+    if (!isset($settings->search_order)) {
+        updateSetting($w, 'search_order', 'playlist▹artist▹track▹album');
+        $settings = $w->read('settings.json');
+    }
+
+    // add always_display_lyrics_in_browser if needed
+    if (!isset($settings->always_display_lyrics_in_browser)) {
+        updateSetting($w, 'always_display_lyrics_in_browser', 0);
+        $settings = $w->read('settings.json');
+    }
+
+    // migrate use_mopidy
+    if (isset($settings->use_mopidy)) {
+        if ($settings->use_mopidy) {
+            updateSetting($w, 'output_application', 'MOPIDY');
+        } else {
+            updateSetting($w, 'output_application', 'APPLESCRIPT');
+        }
+        removeSetting($w,'use_mopidy');
+        $settings = $w->read('settings.json');
+    }
+    
     return $settings;
 }
 
@@ -6493,6 +8196,36 @@ function updateSetting($w, $setting_name, $setting_new_value, $settings_file = '
 
     return $ret;
 }
+
+/**
+ * removeSetting function.
+ *
+ * @param mixed  $w
+ * @param mixed  $setting_name
+ * @param string $settings_file     (default: 'settings.json')
+ */
+ function removeSetting($w, $setting_name, $settings_file = 'settings.json')
+ {
+     $settings = $w->read($settings_file);
+ 
+     if ($settings == false) {
+         logMsg('Error: removeSetting failed while reading JSON file');
+ 
+         return false;
+     }
+     $new_settings = array();
+ 
+     foreach ($settings as $key => $value) {
+         if ($key == $setting_name) {
+             // do nothing
+         } else {
+             $new_settings[$key] = $value;
+         }
+     }
+     $ret = $w->write($new_settings, $settings_file);
+ 
+     return $ret;
+ }
 
 /**
  * logMsg function.
@@ -6740,4 +8473,64 @@ function stathat_ez_count_sync($email, $stat_name, $count)
 function stathat_ez_value_sync($email, $stat_name, $value)
 {
     return do_post_request('http://api.stathat.com/ez', "email=$email&stat=$stat_name&value=$value");
+}
+
+/**
+* Thanks to http://stackoverflow.com/questions/2690504/php-producing-relative-date-time-from-timestamps
+*/
+function time2str($ts)
+{
+    if(!ctype_digit($ts))
+        $ts = strtotime($ts);
+
+    $diff = time() - $ts;
+    if($diff == 0)
+        return 'now';
+    elseif($diff > 0)
+    {
+        $day_diff = floor($diff / 86400);
+        if($day_diff == 0)
+        {
+            if($diff < 60) return 'just now';
+            if($diff < 120) return '1 minute ago';
+            if($diff < 3600) return floor($diff / 60) . ' minutes ago';
+            if($diff < 7200) return '1 hour ago';
+            if($diff < 86400) return floor($diff / 3600) . ' hours ago';
+        }
+        if($day_diff == 1) return 'Yesterday';
+        if($day_diff < 7) return $day_diff . ' days ago';
+        if($day_diff < 31) return ceil($day_diff / 7) . ' weeks ago';
+        if($day_diff < 60) return 'last month';
+        return date('F Y', $ts);
+    }
+    else
+    {
+        $diff = abs($diff);
+        $day_diff = floor($diff / 86400);
+        if($day_diff == 0)
+        {
+            if($diff < 120) return 'in a minute';
+            if($diff < 3600) return 'in ' . floor($diff / 60) . ' minutes';
+            if($diff < 7200) return 'in an hour';
+            if($diff < 86400) return 'in ' . floor($diff / 3600) . ' hours';
+        }
+        if($day_diff == 1) return 'Tomorrow';
+        if($day_diff < 4) return date('l', $ts);
+        if($day_diff < 7 + (7 - date('w'))) return 'next week';
+        if(ceil($day_diff / 7) < 4) return 'in ' . ceil($day_diff / 7) . ' weeks';
+        if(date('n', $ts) == date('n') + 1) return 'next month';
+        return date('F Y', $ts);
+    }
+}
+
+// Problems with search on russian language #210
+// thanks to https://blog.amartynov.ru/php-sqlite-case-insensitive-like-utf8/
+function lexa_ci_utf8_like($mask, $value) {
+    $mask = str_replace(
+        array("%", "_"),
+        array(".*?", "."),
+        preg_quote($mask, "/")
+    );
+    $mask = "/^$mask$/ui";
+    return preg_match($mask, $value);
 }

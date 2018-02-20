@@ -1,10 +1,10 @@
----
-layout: default
-title: Method Reference - Session
----
+## Constants
 
+
+## Methods
 
 ### __construct
+
 
      SpotifyWebAPI\Session::__construct(string $clientId, string $clientSecret, string $redirectUri, \SpotifyWebAPI\Request $request)
 
@@ -19,8 +19,11 @@ Set up client credentials.
 
 
 
+---
+
 
 ### getAuthorizeUrl
+
 
     string SpotifyWebAPI\Session::getAuthorizeUrl(array|object $options)
 
@@ -38,8 +41,11 @@ Get the authorization URL.
 * **string** The authorization URL.
 
 
+---
+
 
 ### getAccessToken
+
 
     string SpotifyWebAPI\Session::getAccessToken()
 
@@ -50,8 +56,11 @@ Get the access token.
 * **string** The access token.
 
 
+---
+
 
 ### getClientId
+
 
     string SpotifyWebAPI\Session::getClientId()
 
@@ -62,8 +71,11 @@ Get the client ID.
 * **string** The client ID.
 
 
+---
+
 
 ### getClientSecret
+
 
     string SpotifyWebAPI\Session::getClientSecret()
 
@@ -74,8 +86,11 @@ Get the client secret.
 * **string** The client secret.
 
 
+---
+
 
 ### getTokenExpiration
+
 
     integer SpotifyWebAPI\Session::getTokenExpiration()
 
@@ -86,8 +101,11 @@ Get the access token expiration time.
 * **integer** A Unix timestamp indicating the token expiration time.
 
 
+---
+
 
 ### getRedirectUri
+
 
     string SpotifyWebAPI\Session::getRedirectUri()
 
@@ -98,8 +116,11 @@ Get the client's redirect URI.
 * **string** The redirect URI.
 
 
+---
+
 
 ### getRefreshToken
+
 
     string SpotifyWebAPI\Session::getRefreshToken()
 
@@ -110,8 +131,11 @@ Get the refresh token.
 * **string** The refresh token.
 
 
+---
+
 
 ### refreshAccessToken
+
 
     boolean SpotifyWebAPI\Session::refreshAccessToken(string $refreshToken)
 
@@ -125,8 +149,11 @@ Refresh an access token.
 * **boolean** Whether the access token was successfully refreshed.
 
 
+---
+
 
 ### requestCredentialsToken
+
 
     boolean SpotifyWebAPI\Session::requestCredentialsToken(array $scope)
 
@@ -140,8 +167,11 @@ Request an access token using the Client Credentials Flow.
 * **boolean** True when an access token was successfully granted, false otherwise.
 
 
+---
+
 
 ### requestAccessToken
+
 
     boolean SpotifyWebAPI\Session::requestAccessToken(string $authorizationCode)
 
@@ -155,8 +185,11 @@ Request an access token given an authorization code.
 * **boolean** True when the access token was successfully granted, false otherwise.
 
 
+---
+
 
 ### setClientId
+
 
     void SpotifyWebAPI\Session::setClientId(string $clientId)
 
@@ -170,8 +203,11 @@ Set the client ID.
 * **void** 
 
 
+---
+
 
 ### setClientSecret
+
 
     void SpotifyWebAPI\Session::setClientSecret(string $clientSecret)
 
@@ -185,8 +221,11 @@ Set the client secret.
 * **void** 
 
 
+---
+
 
 ### setRedirectUri
+
 
     void SpotifyWebAPI\Session::setRedirectUri(string $redirectUri)
 
@@ -199,4 +238,6 @@ Set the client's redirect URI.
 #### Return values
 * **void** 
 
+
+---
 

@@ -185,6 +185,9 @@ try {
     $db->query('PRAGMA default_cache_size=700000');
     $db->query('PRAGMA cache_size=700000');
     $db->query('PRAGMA compile_options');
+    // Problems with search on russian language #210
+    // thanks to https://blog.amartynov.ru/php-sqlite-case-insensitive-like-utf8/
+    $db->sqliteCreateFunction('like', "lexa_ci_utf8_like", 2);
 } catch (PDOException $e) {
     handleDbIssuePdoXml($db);
 
@@ -296,6 +299,8 @@ if (mb_strlen($query) < 2) {
                 firstDelimiterNewReleases($w, $query, $settings, $db, $update_in_progress);
             } elseif ($kind == 'Current Track') {
                 firstDelimiterCurrentTrack($w, $query, $settings, $db, $update_in_progress);
+            } elseif ($kind == 'Spotify Connect') {
+                firstDelimiterSpotifyConnect($w, $query, $settings, $db, $update_in_progress);
             } elseif ($kind == 'Your Music') {
                 firstDelimiterYourMusic($w, $query, $settings, $db, $update_in_progress);
             } elseif ($kind == 'Lyrics') {
@@ -310,6 +315,8 @@ if (mb_strlen($query) < 2) {
                 firstDelimiterBrowse($w, $query, $settings, $db, $update_in_progress);
             } elseif ($kind == 'Your Tops') {
                 firstDelimiterYourTops($w, $query, $settings, $db, $update_in_progress);
+            } elseif ($kind == 'Recent Tracks') {
+                firstDelimiterYourRecentTracks($w, $query, $settings, $db, $update_in_progress);
             }
         }
         ////////////
@@ -371,20 +378,20 @@ if (mb_strlen($query) < 2) {
         // THIRD DELIMITER
 
         ////////////
-            elseif (substr_count($query, '▹') == 3) {
-                $words = explode('▹', $query);
-                $kind = $words[0];
-                if ($kind == 'Add') {
-                    thirdDelimiterAdd($w, $query, $settings, $db, $update_in_progress);
-                } elseif ($kind == 'Browse') {
-                    thirdDelimiterBrowse($w, $query, $settings, $db, $update_in_progress);
-                }
+        elseif (substr_count($query, '▹') == 3) {
+            $words = explode('▹', $query);
+            $kind = $words[0];
+            if ($kind == 'Add') {
+                thirdDelimiterAdd($w, $query, $settings, $db, $update_in_progress);
+            } elseif ($kind == 'Browse') {
+                thirdDelimiterBrowse($w, $query, $settings, $db, $update_in_progress);
             }
+        }
     }
 }
-/*
-$end_time = computeTime();
-$total_temp = ($end_time-$begin_time);
-$w->result(null, 'debug', "Processed in " . $total_temp*1000 . ' ms', '', './images/info.png', 'no', null, '');
-*/
+
+// $end_time = computeTime();
+// $total_temp = ($end_time-$begin_time);
+// $w->result(null, 'debug', "Processed in " . $total_temp*1000 . ' ms', '', './images/info.png', 'no', null, '');
+
 echo $w->tojson();

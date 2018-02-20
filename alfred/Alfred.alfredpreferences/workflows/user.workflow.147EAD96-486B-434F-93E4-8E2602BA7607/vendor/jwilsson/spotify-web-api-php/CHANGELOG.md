@@ -1,5 +1,74 @@
 # Changelog
-## 1.4.2 (2016-12-11)
+## 1.11.1 (2017-06-12)
+* Fixed an issue where some URI IDs would be properly cast to an array. ([713e8e7](https://github.com/jwilsson/spotify-web-api-php/commit/713e8e794cf1a7964ba0055f783516ac6f446715))
+
+## 1.11.0 (2017-06-09)
+* All methods accepting Album, Artist, Playlist, Track, or User IDs can now also accept Spotify URIs. (
+    [1a47fa1](https://github.com/jwilsson/spotify-web-api-php/commit/1a47fa143771d3148d6cda9b59a2d500ed540a1d),
+    [e71daeb](https://github.com/jwilsson/spotify-web-api-php/commit/e71daebdc7204ed9d2c704e2f5bfe0798ae3da60),
+    [63dde40](https://github.com/jwilsson/spotify-web-api-php/commit/63dde405829e7894f2c0ce659ac5cc09cfa48bb7),
+    [4bf29b1](https://github.com/jwilsson/spotify-web-api-php/commit/4bf29b13f64819513cd573cd86ce19ccd321ac40),
+)
+* Corrected `SpotifyWebAPI::getMySavedTracks` example. ([0eedf1c](https://github.com/jwilsson/spotify-web-api-php/commit/0eedf1cfbd6211eb41b99aedd71dabc9901d47b2))
+* Updated `PHP_CodeSniffer` to `3.x`. ([60adb2c](https://github.com/jwilsson/spotify-web-api-php/commit/60adb2cb05b7adeccc271faeb8d6cceb6f949288))
+* Travis builds now uses Trusty as the distribution. ([011524b](https://github.com/jwilsson/spotify-web-api-php/commit/011524b46c44c98b67bdd5930f534d40cc19804c))
+
+## 1.10.1 (2017-04-29)
+* Updated CA bundle. ([ff8d87e](https://github.com/jwilsson/spotify-web-api-php/commit/ff8d87eabbffc3e3c1e4e5d9145faf2ef1ef4932))
+* Corrected the name of some Markdown example files. ([d6425f6](https://github.com/jwilsson/spotify-web-api-php/commit/d6425f610bfd377a4156a421f1246b50e57690ae))
+* Corrected `SpotifyWebAPI::play()` example. ([ce2c08c](https://github.com/jwilsson/spotify-web-api-php/commit/ce2c08c90ca8d0fa420d15790dceb40ebb9f1297))
+* Corrected inline method docs. ([d725d16](https://github.com/jwilsson/spotify-web-api-php/commit/d725d16a8726b19cc51da42557b97d00f4f52395))
+* Removed stray `SpotifyWebApi` object in examples. ([7ef922b](https://github.com/jwilsson/spotify-web-api-php/commit/7ef922bf2fca35b0601578c51f870d481f5762d5))
+
+## 1.10.0 (2017-04-12)
+* Added Spotify Connect endpoints:
+    * `SpotifyWebAPI::changeMyDevice()` ([21dd887](https://github.com/jwilsson/spotify-web-api-php/commit/21dd887271ba7c905fd2df0ea0f600421ef74baf))
+    * `SpotifyWebAPI::changeVolume()` ([e9cdd79](https://github.com/jwilsson/spotify-web-api-php/commit/e9cdd797384559f83734626076cddecb15a195db))
+    * `SpotifyWebAPI::getMyCurrentPlaybackInfo()` ([61f4cbd](https://github.com/jwilsson/spotify-web-api-php/commit/61f4cbd282cf3d89c8b135ad9a4eef6a07b9d5ff))
+    * `SpotifyWebAPI::getMyCurrentTrack()` ([0f30a6b](https://github.com/jwilsson/spotify-web-api-php/commit/0f30a6b725f8f538e5eae8c893904e2045554881))
+    * `SpotifyWebAPI::getMyDevices()` ([8b33f9d](https://github.com/jwilsson/spotify-web-api-php/commit/8b33f9d64f29aabb7ffd910ce8e09b46e043e2e4))
+    * `SpotifyWebAPI::next()` ([9950c51](https://github.com/jwilsson/spotify-web-api-php/commit/9950c51790ba2ff05d0fb4e7360d6d745fd9ae1b))
+    * `SpotifyWebAPI::pause()` ([b724c4a](https://github.com/jwilsson/spotify-web-api-php/commit/b724c4aefa6db88b397d7d19e24dae902f0d287c))
+    * `SpotifyWebAPI::play()` ([825a632](https://github.com/jwilsson/spotify-web-api-php/commit/825a632fda5a8dadfe5ce5e782d768f0e7044c08))
+    * `SpotifyWebAPI::previous()` ([90a97e1](https://github.com/jwilsson/spotify-web-api-php/commit/90a97e1d1b294d53a3a629febea78ba9eafb373a))
+    * `SpotifyWebAPI::repeat()` ([1feebfe](https://github.com/jwilsson/spotify-web-api-php/commit/1feebfe365a140475f12d22151ec9fe5c4a11fe9))
+    * `SpotifyWebAPI::seek()` ([0641a07](https://github.com/jwilsson/spotify-web-api-php/commit/0641a07cd79451681882273b630ff6313c570dbe))
+    * `SpotifyWebAPI::shuffle()` ([d43268c](https://github.com/jwilsson/spotify-web-api-php/commit/d43268c4178cf1131eeed6de521f7bdf29a4b560))
+* Complete documentation revamp. ([82d9fab](https://github.com/jwilsson/spotify-web-api-php/commit/82d9fabfc3f620068a114f55eff3a0e0803ff1a3))
+* Made sure empty objects are correctly serialized to JSON objects instead of JSON arrays. ([b17682e](https://github.com/jwilsson/spotify-web-api-php/commit/b17682e6a1cf25c25c87a2a900cf6858a9c038b7))
+## 1.9.0 (2017-03-24)
+* Added the `SpotifyWebAPI::getMyRecentTracks()` method. ([4df889f](https://github.com/jwilsson/spotify-web-api-php/commit/4df889f2aa44c171d492f2784b45fd1155429b57))
+
+## 1.8.0 (2017-03-05)
+* Added the `SpotifyWebAPI::getMyRecentTracks()` method. ([fd8ea0d](https://github.com/jwilsson/spotify-web-api-php/commit/fd8ea0d70d690bbb0072a917530eba2b8c02e2a1))
+
+## 1.7.0 (2017-02-25)
+* The following methods can now also accept Spotify URIs:
+    * `SpotifyWebAPI::addMyAlbums()` ([eecaea4](https://github.com/jwilsson/spotify-web-api-php/commit/eecaea4f8fe5d6554104da1018ba39002889c873))
+    * `SpotifyWebAPI::addMyTracks()` ([1b63d90](https://github.com/jwilsson/spotify-web-api-php/commit/1b63d907d9127bba7ad013ce1fdf0617d894cd95))
+    * `SpotifyWebAPI::deleteMyAlbums()` ([eecaea4](https://github.com/jwilsson/spotify-web-api-php/commit/eecaea4f8fe5d6554104da1018ba39002889c873))
+    * `SpotifyWebAPI::deleteMyTracks()` ([eecaea4](https://github.com/jwilsson/spotify-web-api-php/commit/eecaea4f8fe5d6554104da1018ba39002889c873))
+    * `SpotifyWebAPI::myAlbumsContains()` ([beb48e2](https://github.com/jwilsson/spotify-web-api-php/commit/beb48e2e397391a90129570ee1556347af70a95f))
+    * `SpotifyWebAPI::myTracksContains()` ([edd72d7](https://github.com/jwilsson/spotify-web-api-php/commit/edd72d77ea834fff15c716e5f085e0d058966e0d))
+* PHPUnit 5 is now used whenever possible. ([9892fe4](https://github.com/jwilsson/spotify-web-api-php/commit/9892fe481dd3193d719a251d43ce429d40202df8))
+
+## 1.6.1 (2017-01-28)
+* Bump for bad `1.6.0`.
+
+## 1.6.0 (2017-01-28)
+* Deprecated the following methods and replaced them with ([6aac5c6](https://github.com/jwilsson/spotify-web-api-php/commit/6aac5c6880017e0fadf7a48c5ba740dad2d9e617)):
+    * `Request::getReturnAssoc()` -> `Request::getReturnType()`
+    * `Request::setReturnAssoc()` -> `Request::setReturnType(Request::RETURN_ASSOC)`
+    * `SpotifyWebAPI::getReturnAssoc()` -> `SpotifyWebAPI::getReturnType()`
+    * `SpotifyWebAPI::setReturnAssoc()` -> `SpotifyWebAPI::setReturnType(SpotifyWebAPI::RETURN_ASSOC)`
+* Added the following constants for use with `setReturnType()` ([6aac5c6](https://github.com/jwilsson/spotify-web-api-php/commit/6aac5c6880017e0fadf7a48c5ba740dad2d9e617)):
+    * `Request::RETURN_ASSOC`
+    * `Request::RETURN_OBJECT`
+    * `SpotifyWebAPI::RETURN_ASSOC`
+    * `SpotifyWebAPI::RETURN_OBJECT`
+* Added docs on how to change the return type. ([10b47b5](https://github.com/jwilsson/spotify-web-api-php/commit/10b47b5cb4662ba53d45590cf39f9482a6dcb51e))
+
+## 1.5.0 (2016-12-11)
 * Added a `Request::getLastResponse()` method. ([21b72b0](https://github.com/jwilsson/spotify-web-api-php/commit/21b72b040ec10550649ded9050a431f890081f08))
 * Added a `SpotifyWebAPI::getRequest` method.
 ([bab8924](https://github.com/jwilsson/spotify-web-api-php/commit/bab8924b1636e7d19f45722add8a0b769818983d))
@@ -13,7 +82,7 @@
 * Fixed a typo in the `SpotifyWebAPI::getLastResponse()` docs. ([bdd3ecc](https://github.com/jwilsson/spotify-web-api-php/commit/bdd3ecc393ff83bc2d4af983c363cdaddb1b544b))
 
 ## 1.4.2 (2016-10-27)
-* Array indexes in SpotifyWebAPI::idToUri() are now always reset to prevent undefined offset errors. ([ae8bd96](https://github.com/jwilsson/spotify-web-api-php/commit/ae8bd9673795747fad40ff4caf6b12f17c045fc5))
+* Array indexes in `SpotifyWebAPI::idToUri()` are now always reset to prevent undefined offset errors. ([ae8bd96](https://github.com/jwilsson/spotify-web-api-php/commit/ae8bd9673795747fad40ff4caf6b12f17c045fc5))
 
 ## 1.4.1 (2016-10-25)
 * All requests will now be compressed using gzip. ([5eeabde](https://github.com/jwilsson/spotify-web-api-php/commit/5eeabde90d1c21832384f42d96c1208ce6fda287))

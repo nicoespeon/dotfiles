@@ -1,11 +1,5 @@
 [
 	{
-		"name": "O3 SAR",
-		"rootPath": "$home/Google Drive/Professionnel/OCTO/Samuel Rochette (SAR)/O3",
-		"paths": [],
-		"group": ""
-	},
-	{
 		"name": "BOW Paris Website",
 		"rootPath": "$home/Development/github/bow-paris/bow-paris.github.io",
 		"paths": [],
@@ -38,6 +32,12 @@
 	{
 		"name": "GitGraph.js",
 		"rootPath": "$home/Development/github/nicoespeon/gitgraph.js",
+		"paths": [],
+		"group": ""
+	},
+	{
+		"name": "my-spotify-groomer",
+		"rootPath": "$home/Development/github/my-spotify-groomer",
 		"paths": [],
 		"group": ""
 	}
