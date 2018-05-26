@@ -1,5 +1,6 @@
 gitignore/
 wallaby.js
+.vscode/
 
 # Created by https://www.gitignore.io/api/macos,visualstudiocode,intellij,vim
 
