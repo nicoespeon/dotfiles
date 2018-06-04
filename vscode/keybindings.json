@@ -15,10 +15,6 @@
     "when": "editorTextFocus && !editorReadonly"
   },
   {
-    "key": "shift+cmd+o",
-    "command": "workbench.action.quickOpen"
-  },
-  {
     "key": "shift+alt+up",
     "command": "editor.action.moveLinesUpAction",
     "when": "editorTextFocus && !editorReadonly"
@@ -218,6 +214,16 @@
     "when": "editorTextFocus && !editorReadonly"
   },
   {
+    "key": "cmd+7",
+    "command": "editor.fold",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "cmd+8",
+    "command": "editor.unfold",
+    "when": "editorTextFocus"
+  },
+  {
     "key": "cmd+9",
     "command": "editor.foldAll",
     "when": "editorTextFocus"
@@ -348,5 +354,35 @@
     "key": "shift+cmd+l",
     "command": "-editor.action.selectHighlights",
     "when": "editorFocus"
+  },
+  {
+    "key": "shift+cmd+8",
+    "command": "editor.unfoldRecursively",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "cmd+k ctrl+alt+cmd+5",
+    "command": "-editor.unfoldRecursively",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "shift+cmd+7",
+    "command": "editor.foldRecursively",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "cmd+k ctrl+alt+cmd+4",
+    "command": "-editor.foldRecursively",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "ctrl+shift+c",
+    "command": "editor.action.insertCursorAtEndOfEachLineSelected",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "shift+alt+i",
+    "command": "-editor.action.insertCursorAtEndOfEachLineSelected",
+    "when": "editorTextFocus"
   }
 ]
