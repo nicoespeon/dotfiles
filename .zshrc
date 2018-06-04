@@ -98,6 +98,12 @@ alias refresh="source ~/.zshrc"
 ## Add GCloud to PATH for Integrations (accessing logs)
 export PATH=$PATH:/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin
 
+## Add bbint to path
+export PATH="$HOME/Development/busbud/integrations/_tools/bbint:$PATH"
+
+## NPM Token
+export NPM_TOKEN=$(cat gitignore/npm_token)
+
 # Prevent the annoying "Setting locale failed" issue with Perl
 export LC_ALL=fr_FR.UTF-8
 export LC_CTYPE=fr_FR.UTF-8
