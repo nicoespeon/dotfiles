@@ -102,7 +102,11 @@ export PATH=$PATH:/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/b
 export PATH="$HOME/Development/busbud/integrations/_tools/bbint:$PATH"
 
 ## NPM Token
-export NPM_TOKEN=$(cat gitignore/npm_token)
+export NPM_TOKEN=$(cat $HOME/.npm_token)
+
+## Add Go to PATH
+export GOPATH="$HOME/go"
+export PATH="$GOPATH/bin:$PATH"
 
 # Prevent the annoying "Setting locale failed" issue with Perl
 export LC_ALL=fr_FR.UTF-8
