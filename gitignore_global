@@ -1,7 +1,3 @@
-gitignore/
-wallaby.js
-.vscode/
-
 # Created by https://www.gitignore.io/api/macos,visualstudiocode,intellij,vim
 
 ### Intellij ###
@@ -106,3 +102,9 @@ tags
 !.vscode/extensions.json
 
 # End of https://www.gitignore.io/api/macos,visualstudiocode,intellij,vim
+
+# Custom ignores
+gitignore/
+wallaby.js
+.vscode/
+
