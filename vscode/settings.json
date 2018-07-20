@@ -1,7 +1,7 @@
 // Placez vos paramètres dans ce fichier pour remplacer les paramètres par défaut
 {
   "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
+  "editor.formatOnPaste": false,
   "editor.fontSize": 14,
   "editor.fontFamily": "Fira Code",
   "editor.fontLigatures": true,
@@ -10,6 +10,8 @@
   "editor.snippetSuggestions": "top",
   "editor.minimap.enabled": true,
   "editor.dragAndDrop": true,
+  "editor.tabSize": 2,
+  "editor.acceptSuggestionOnCommitCharacter": false,
   "elm.makeCommand": "/usr/local/bin/elm-make",
   "elm.formatCommand": "/usr/local/bin/elm-format",
   "explorer.confirmDragAndDrop": false,
@@ -19,6 +21,7 @@
   "files.insertFinalNewline": true,
   "gitlens.keymap": "chorded",
   "gitlens.historyExplorer.enabled": true,
+  "gitlens.showWhatsNewAfterUpgrades": false,
   "gitlens.advanced.messages": {
     "suppressCommitHasNoPreviousCommitWarning": false,
     "suppressCommitNotFoundWarning": false,
@@ -32,18 +35,15 @@
     "suppressWelcomeNotice": false
   },
   "html.format.unformatted": "a, abbr, acronym, b, bdo, big, br, button, cite, code, dfn, em, i, img, input, kbd, label, map, object, q, samp, select, small, span, strong, sub, sup, textarea, tt, var, thead, tfoot",
-  "prettier.requireConfig": true,
-  "prettier.singleQuote": true,
-  "prettier.tabWidth": 2,
   "sync.gist": "f77c0e53e02c99cf37aa8917f3b9d302",
-  "sync.lastUpload": "2018-06-06T20:20:41.955Z",
+  "sync.lastUpload": "2018-07-08T21:56:59.092Z",
   "sync.autoDownload": false,
   "sync.autoUpload": true,
   "sync.lastDownload": "",
   "sync.forceDownload": false,
   "sync.host": "",
   "sync.pathPrefix": "",
-  "sync.quietSync": false,
+  "sync.quietSync": true,
   "sync.askGistName": false,
   "sync.removeExtensions": true,
   "sync.syncExtensions": true,
@@ -51,9 +51,10 @@
   "terminal.integrated.shell.osx": "/usr/local/bin/zsh",
   "terminal.integrated.fontSize": 14,
   "typescript.check.npmIsInstalled": false,
+  "typescript.updateImportsOnFileMove.enabled": "always",
   "window.title": "${rootName}${separator}${activeEditorMedium}",
   "window.zoomLevel": 0,
   "workbench.editor.tabSizing": "shrink",
   "workbench.iconTheme": "file-icons",
-  "workbench.colorTheme": "Night Owl"
+  "workbench.colorTheme": "Panda Syntax",
 }
