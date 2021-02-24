@@ -22,3 +22,6 @@
 	insteadOf = https://git.heroku.com/
 [rebase]
 	autosquash = true
+[help]
+	autocomplete = 5
+	autocorrect = 20

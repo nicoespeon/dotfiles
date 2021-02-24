@@ -1,8 +1,7 @@
 // Placez vos paramètres dans ce fichier pour remplacer les paramètres par défaut
 {
-  "editor.formatOnSave": true,
   "editor.formatOnPaste": false,
-  "editor.fontSize": 14,
+  "editor.fontSize": 20,
   "editor.fontFamily": "Fira Code",
   "editor.fontLigatures": true,
   "editor.wordWrap": "wordWrapColumn",
@@ -12,49 +11,126 @@
   "editor.dragAndDrop": true,
   "editor.tabSize": 2,
   "editor.acceptSuggestionOnCommitCharacter": false,
-  "elm.makeCommand": "/usr/local/bin/elm-make",
-  "elm.formatCommand": "/usr/local/bin/elm-format",
+  "explorer.openEditors.visible": 0,
   "explorer.confirmDragAndDrop": false,
   "explorer.confirmDelete": false,
-  "files.autoSave": "onFocusChange",
   "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-  "gitlens.keymap": "chorded",
-  "gitlens.historyExplorer.enabled": true,
-  "gitlens.showWhatsNewAfterUpgrades": false,
-  "gitlens.advanced.messages": {
-    "suppressCommitHasNoPreviousCommitWarning": false,
-    "suppressCommitNotFoundWarning": false,
-    "suppressFileNotUnderSourceControlWarning": false,
-    "suppressGitVersionWarning": false,
-    "suppressLineUncommittedWarning": false,
-    "suppressNoRepositoryWarning": false,
-    "suppressResultsExplorerNotice": false,
-    "suppressShowKeyBindingsNotice": true,
-    "suppressUpdateNotice": true,
-    "suppressWelcomeNotice": false
-  },
   "html.format.unformatted": "a, abbr, acronym, b, bdo, big, br, button, cite, code, dfn, em, i, img, input, kbd, label, map, object, q, samp, select, small, span, strong, sub, sup, textarea, tt, var, thead, tfoot",
   "sync.gist": "f77c0e53e02c99cf37aa8917f3b9d302",
-  "sync.lastUpload": "2018-07-08T21:56:59.092Z",
   "sync.autoDownload": false,
   "sync.autoUpload": true,
-  "sync.lastDownload": "",
   "sync.forceDownload": false,
-  "sync.host": "",
-  "sync.pathPrefix": "",
   "sync.quietSync": true,
-  "sync.askGistName": false,
   "sync.removeExtensions": true,
   "sync.syncExtensions": true,
+  "terminal.integrated.inheritEnv": true,
   "terminal.integrated.shell.linux": "/usr/local/bin/zsh",
-  "terminal.integrated.shell.osx": "/usr/local/bin/zsh",
-  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.shell.osx": "/bin/zsh",
+  "terminal.integrated.fontSize": 20,
   "typescript.check.npmIsInstalled": false,
   "typescript.updateImportsOnFileMove.enabled": "always",
   "window.title": "${rootName}${separator}${activeEditorMedium}",
   "window.zoomLevel": 0,
   "workbench.editor.tabSizing": "shrink",
+  "breadcrumbs.enabled": true,
+  "[handlebars]": {
+    "editor.formatOnSave": false
+  },
+  "git.autofetch": true,
+  "terminal.integrated.rendererType": "dom",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "editor.cursorSmoothCaretAnimation": true,
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "sync.forceUpload": true,
+  "editor.minimap.renderCharacters": false,
+  "liveshare.featureSet": "insiders",
   "workbench.iconTheme": "file-icons",
-  "workbench.colorTheme": "Panda Syntax",
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+  "files.autoSave": "onFocusChange",
+  "todohighlight.keywords": [
+    "TK:",
+    "SMELL:",
+    "REFACTOR:",
+    {
+      "text": "[cursor]",
+      "color": "grey",
+      "backgroundColor": "#832561",
+      "overviewRulerColor": "transparent"
+    },
+    {
+      "text": "[start]",
+      "color": "grey",
+      "backgroundColor": "#832561",
+      "overviewRulerColor": "transparent"
+    },
+    {
+      "text": "[end]",
+      "color": "grey",
+      "backgroundColor": "#832561",
+      "overviewRulerColor": "transparent"
+    }
+  ],
+  "workbench.colorTheme": "One Dark Pro Monokai Darker",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "peacock.favoriteColors": [
+    {
+      "name": "Angular Red",
+      "value": "#dd0531"
+    },
+    {
+      "name": "Azure Blue",
+      "value": "#007fff"
+    },
+    {
+      "name": "JavaScript Yellow",
+      "value": "#f9e64f"
+    },
+    {
+      "name": "Mandalorian Blue",
+      "value": "#1857a4"
+    },
+    {
+      "name": "Node Green",
+      "value": "#215732"
+    },
+    {
+      "name": "React Blue",
+      "value": "#61dafb"
+    },
+    {
+      "name": "Something Different",
+      "value": "#832561"
+    },
+    {
+      "name": "Svelte Orange",
+      "value": "#ff3d00"
+    },
+    {
+      "name": "Vue Green",
+      "value": "#42b883"
+    }
+  ],
+  "search.useReplacePreview": false,
+  "workbench.editor.enablePreview": false,
+  "editor.formatOnSave": true,
+  "editor.gotoLocation.multipleImplementations": "goto",
+  "todohighlight.isEnable": true,
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "abracadabra.ignoredFolders": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }

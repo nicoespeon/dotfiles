@@ -91,6 +91,7 @@ alias ns="npm start"
 alias nsw="npm run start:watch"
 alias ni="npm install"
 alias nt="npm test"
+alias ntw="npm run test:watch"
 alias zshconfig="code ~/.zshrc"
 alias refresh="source ~/.zshrc"
 
@@ -116,3 +117,8 @@ export LANG=fr_FR.UTF-8
 # Fuzzy Finder <https://github.com/junegunn/fzf>
 # You may need to re-install it if you are copying dotfiles.
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$PATH:$HOME/.rvm/bin"
+
+export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).

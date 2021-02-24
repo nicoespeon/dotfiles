@@ -1,8 +1,8 @@
 {
-/*
-	 // Place your snippets for JavaScript here. Each snippet is defined under a snippet name and has a prefix, body and 
+  /*
+	 // Place your snippets for JavaScript here. Each snippet is defined under a snippet name and has a prefix, body and
 	 // description. The prefix is what is used to trigger the snippet and the body will be expanded and inserted. Possible variables are:
-	 // $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. Placeholders with the 
+	 // $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. Placeholders with the
 	 // same ids are connected.
 	 // Example:
 	 "Print to console": {
@@ -14,17 +14,66 @@
 		"description": "Log output to console"
 	}
 */
-	"Test assertion": {
-		"prefix": "test",
-		"body": [
-			"test('should ${1:do something}', () => {",
-			"  ${4:// Given}",
-			"",
-			"  ${3:// When}",
-			"",
-			"  ${2:// Then}",
-			"})$0"
-		],
-		"description": "Test assertion (ES6)"
-	}
+  "Test assertion": {
+    "prefix": "test",
+    "body": [
+      "test('should ${1:do something}', () => {",
+      "  ${4:// Given}",
+      "",
+      "  ${3:// When}",
+      "",
+      "  ${2:// Then}",
+      "})$0"
+    ],
+    "description": "Test assertion (ES6)"
+  },
+  "It (test assertion)": {
+    "prefix": "it",
+    "body": [
+      "it('${1:do something}', ${2:async} () => {",
+      "  ${5:// Given}",
+      "",
+      "  ${4:// When}",
+      "",
+      "  ${3:// Then}",
+      "})$0"
+    ],
+    "description": "It (test assertion)"
+  },
+  "Describe (test context)": {
+    "prefix": "describe",
+    "body": ["describe('${1:context}', () => {", "  $0", "})"],
+    "description": "Describe (test context)"
+  },
+  "Pubweb component test": {
+    "prefix": "pubtest",
+    "description": "Pubweb component test",
+    "body": [
+      "// @ts-check",
+      "",
+      "import React from 'react';",
+      "import { mount } from 'enzyme';",
+      "// import { assert } from 'chai';",
+      "",
+      "import $1 from '@app/$2'",
+      "",
+      "describe('$1', () => {",
+      "  let props;",
+      "  let context;",
+      "",
+      "  beforeEach(() => {",
+      "    props = {",
+      "      $3",
+      "    };",
+      "    context = {",
+      "      $4",
+      "    };",
+      "  });",
+      "",
+      "  it('should work', () => {",
+      "    mount(<$1 {...props} />, { context });$0",
+      "  });",
+      "});"
+    ]
+  }
 }

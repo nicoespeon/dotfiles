@@ -106,5 +106,6 @@ tags
 # Custom ignores
 gitignore/
 wallaby.js
-.vscode/
+.python-version
+__pycache__/
 
