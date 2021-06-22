@@ -30,7 +30,6 @@
   "typescript.check.npmIsInstalled": false,
   "typescript.updateImportsOnFileMove.enabled": "always",
   "window.title": "${rootName}${separator}${activeEditorMedium}",
-  "window.zoomLevel": 0,
   "workbench.editor.tabSizing": "shrink",
   "breadcrumbs.enabled": true,
   "[handlebars]": {
