@@ -108,4 +108,4 @@ gitignore/
 wallaby.js
 .python-version
 __pycache__/
-
+.claude/settings.local.json
